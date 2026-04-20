@@ -92,14 +92,26 @@ function ConfiguratorShellInner() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [drillActions]);
 
-  // Ghost Zone: Grid-Erweiterung bei Rand-Ghost-Zones
-  const handleExpandAndAdd = useCallback((direction: 'left' | 'right' | 'top' | 'bottom' | 'depth', _atIndex: number) => {
-    if (direction === 'left') actions.addFilledColLeft();
-    else if (direction === 'right') actions.addFilledColRight();
-    else if (direction === 'top') actions.addFilledRowTop();
-    else if (direction === 'bottom') actions.addFilledRowBottom();
-    else if (direction === 'depth') actions.addDepthFront();
-  }, [actions]);
+  // Ghost Zone: Grid-Erweiterung bei Rand-Ghost-Zones — nur 1 Zelle hinzufügen
+  const handleExpandAndAdd = useCallback((direction: 'left' | 'right' | 'top' | 'bottom' | 'depth', atIndex: number) => {
+    if (direction === 'left') {
+      // Leere Spalte links einfügen, dann Zelle bei atIndex (=row) aktivieren
+      actions.addColLeft();
+      // Nach addColLeft ist die neue Spalte bei col=0, row=atIndex
+      // setTimeout weil setState batched — setType muss nach dem Grid-Update laufen
+      setTimeout(() => actions.setType(atIndex, 0, 'O'), 0);
+    } else if (direction === 'right') {
+      actions.addColRight();
+      const newCol = state.cols.length; // nach addColRight ist das der neue Index
+      setTimeout(() => actions.setType(atIndex, newCol, 'O'), 0);
+    } else if (direction === 'top') {
+      actions.addRowTop();
+      // Nach addRowTop ist die neue Zeile bei row=0, col=atIndex
+      setTimeout(() => actions.setType(0, atIndex, 'O'), 0);
+    } else if (direction === 'depth') {
+      actions.addDepthFront();
+    }
+  }, [actions, state.cols.length]);
 
   const handleRemoveElement = useCallback((row: number, col: number) => {
     actions.setType(row, col, '');
