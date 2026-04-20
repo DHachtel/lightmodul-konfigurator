@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Technisches Briefing — Artmodul Konfigurator</title>
+<style>
+  :root {
+    --primary: #1C1A17;
+    --accent: #8A7050;
+    --bg: #FAFAF8;
+    --card: #FFFFFF;
+    --border: #E8E5E0;
+    --muted: #7A7670;
+    --green: #16A34A;
+    --amber: #D97706;
+    --red: #DC2626;
+    --blue: #2563EB;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+    color: var(--primary);
+    background: var(--bg);
+    line-height: 1.65;
+    font-size: 14px;
+  }
+  .page {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 40px 32px 80px;
+  }
+  header {
+    border-bottom: 2px solid var(--primary);
+    padding-bottom: 20px;
+    margin-bottom: 32px;
+  }
+  header h1 { font-size: 26px; font-weight: 700; margin-bottom: 4px; }
+  header .subtitle { font-size: 15px; color: var(--accent); }
+  header .meta { font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+  h2 {
+    font-size: 18px; font-weight: 700;
+    margin: 36px 0 16px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+    color: var(--primary);
+  }
+  h3 { font-size: 15px; font-weight: 600; margin: 20px 0 8px; color: var(--accent); }
+
+  p, li { font-size: 14px; line-height: 1.7; }
+  p { margin-bottom: 10px; }
+  ul, ol { margin: 8px 0 12px 20px; }
+  li { margin-bottom: 4px; }
+
+  table {
+    width: 100%; border-collapse: collapse;
+    margin: 12px 0 20px; font-size: 13px;
+  }
+  th, td {
+    text-align: left; padding: 8px 12px;
+    border: 1px solid var(--border);
+  }
+  th { background: #F3F1ED; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    margin: 16px 0;
+  }
+
+  .status { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+  .status-ok { background: #DCFCE7; color: var(--green); }
+  .status-warn { background: #FEF3C7; color: var(--amber); }
+  .status-open { background: #FEE2E2; color: var(--red); }
+  .status-info { background: #DBEAFE; color: var(--blue); }
+
+  .toc { background: #F3F1ED; border-radius: 8px; padding: 20px 24px; margin-bottom: 32px; }
+  .toc h3 { margin-top: 0; color: var(--primary); }
+  .toc ol { margin: 8px 0 0 20px; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+
+  .diagram {
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 12px;
+    background: #1C1A17;
+    color: #E8E5E0;
+    padding: 20px;
+    border-radius: 8px;
+    overflow-x: auto;
+    white-space: pre;
+    line-height: 1.5;
+    margin: 12px 0 20px;
+  }
+  .diagram .hl { color: #F59E0B; }
+  .diagram .g { color: #4ADE80; }
+  .diagram .b { color: #60A5FA; }
+  .diagram .r { color: #F87171; }
+
+  .finding { display: flex; gap: 12px; align-items: flex-start; margin: 12px 0; }
+  .finding .icon { font-size: 18px; flex-shrink: 0; margin-top: 2px; }
+
+  code {
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 12px;
+    background: #F3F1ED;
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 12px 0; }
+  @media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .footer-note {
+    margin-top: 48px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  @media print {
+    body { background: #fff; font-size: 11px; }
+    .page { padding: 20px; max-width: 100%; }
+    h2 { page-break-after: avoid; }
+    .card, table { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <h1>Technisches Briefing &mdash; Artmodul Konfigurator</h1>
+  <div class="subtitle">Architektur, Hosting, Datenverarbeitung, Sicherheit &amp; DSGVO</div>
+  <div class="meta">
+    MHZ Hachtel GmbH &bull; Stand: 20. April 2026 &bull; Vertraulich<br>
+    Zielgruppe: Management, IT-Abteilung, DSGVO-Verantwortliche
+  </div>
+</header>
+
+<!-- Inhaltsverzeichnis -->
+<div class="toc">
+  <h3>Inhaltsverzeichnis</h3>
+  <ol>
+    <li><a href="#s1">Zusammenfassung (Management Summary)</a></li>
+    <li><a href="#s2">Systemarchitektur &amp; Tech Stack</a></li>
+    <li><a href="#s3">Hosting &amp; Infrastruktur</a></li>
+    <li><a href="#s4">Datenverarbeitung &mdash; Wo werden welche Daten verarbeitet?</a></li>
+    <li><a href="#s5">Sicherheitsarchitektur</a></li>
+    <li><a href="#s6">DSGVO-Compliance</a></li>
+    <li><a href="#s7">Auftragsverarbeiter (Subprocessors)</a></li>
+    <li><a href="#s8">Offene Punkte &amp; Handlungsempfehlungen</a></li>
+    <li><a href="#s9">Gesamtbewertung</a></li>
+  </ol>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="s1">1. Zusammenfassung (Management Summary)</h2>
+
+<div class="card">
+  <p>Der <strong>Artmodul Konfigurator</strong> ist eine webbasierte Anwendung, mit der Endkunden und Händler Regalsysteme der Marke Artmodul konfigurieren, eine Stückliste (BOM) berechnen und Anfragen an MHZ senden können.</p>
+  <p><strong>Kernaussagen:</strong></p>
+  <ul>
+    <li><strong>Kein Tracking, keine Analyse-Tools</strong> &mdash; die Anwendung setzt weder Google Analytics noch sonstige Tracking-Dienste ein.</li>
+    <li><strong>Nur technisch notwendige Cookies</strong> &mdash; keine Einwilligungspflicht für Cookies nach ePrivacy-Richtlinie.</li>
+    <li><strong>Drei Sicherheitsschichten</strong> &mdash; HTTP Basic Auth (Beta-Schutz) + Supabase Auth (Rollensystem) + Admin-Cookie-Auth (HMAC-signiert).</li>
+    <li><strong>Row-Level Security (RLS)</strong> auf allen Datenbanktabellen &mdash; ergänzt durch DB-Trigger als Defense-in-Depth.</li>
+    <li><strong>Personenbezogene Daten</strong> werden ausschließlich bei Bestellanfragen erhoben (Name, E-Mail, optional Adresse/Telefon).</li>
+    <li><strong>Hosting</strong>: Vercel (Frontend/API, CDN global) + Supabase (Datenbank, EU-Region verfügbar).</li>
+    <li><strong>Datenschutzerklärung und Impressum</strong> sind implementiert und aktuell (Stand April 2026).</li>
+  </ul>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="s2">2. Systemarchitektur &amp; Tech Stack</h2>
+
+<h3>2.1 Technologie-Stack</h3>
+<table>
+  <tr><th>Bereich</th><th>Technologie</th><th>Zweck</th></tr>
+  <tr><td>Framework</td><td>Next.js 16 (App Router)</td><td>Full-Stack-Framework mit SSR/SSG</td></tr>
+  <tr><td>Sprache</td><td>TypeScript (strict mode)</td><td>Typsicherheit, Fehlerprävention</td></tr>
+  <tr><td>Styling</td><td>Tailwind CSS v4</td><td>Utility-first CSS, kein externes CSS-CDN</td></tr>
+  <tr><td>Backend / DB</td><td>Supabase (PostgreSQL + Auth + RLS)</td><td>Datenbank, Authentifizierung, Autorisierung</td></tr>
+  <tr><td>3D-Rendering</td><td>Three.js / React Three Fiber</td><td>Clientseitige 3D-Vorschau (WebGL)</td></tr>
+  <tr><td>PDF-Erzeugung</td><td>@react-pdf/renderer</td><td>Serverseitige PDF-Generierung (Node.js)</td></tr>
+  <tr><td>E-Mail</td><td>Nodemailer (SMTP)</td><td>Transaktions-E-Mails (Bestellbestätigung)</td></tr>
+  <tr><td>Validierung</td><td>Zod v4</td><td>Schema-Validierung aller API-Eingaben</td></tr>
+  <tr><td>Hosting</td><td>Vercel</td><td>Serverless Deployment, CDN, Edge Network</td></tr>
+</table>
+
+<h3>2.2 Schichtenmodell</h3>
+<div class="diagram"><span class="b">Browser (Client)</span>
+  ├─ React-UI (Konfigurator, 3D-Vorschau, Formulare)
+  ├─ Supabase Auth SDK (Session-Management)
+  ├─ localStorage (Warenkorb, Cookie-Bestätigung)
+  └─ Three.js / WebGL (3D-Rendering, lokal)
+
+<span class="hl">Vercel Edge (Middleware)</span>
+  ├─ HTTP Basic Auth (Beta-Schutz)
+  ├─ Rate Limiting (pro IP, In-Memory)
+  ├─ Admin-Route-Schutz (HMAC-Cookie)
+  └─ Supabase-Session-Erneuerung
+
+<span class="g">Vercel Serverless (API-Routen)</span>
+  ├─ /api/bom        → BOM-Berechnung + Preisabfrage
+  ├─ /api/orders     → Bestellannahme + E-Mail-Versand
+  ├─ /api/pdf        → Angebots-PDF (nur Händler/Admin)
+  ├─ /api/datasheet  → Datenblatt-PDF
+  ├─ /api/config/*   → Konfiguration speichern/laden
+  └─ /api/admin/*    → Admin-Panel-Endpunkte
+
+<span class="r">Supabase (PostgreSQL + Auth)</span>
+  ├─ profiles         → Benutzerprofile + Rollen
+  ├─ article_prices   → Preisliste (EUR/CHF)
+  ├─ saved_configs    → Gespeicherte Konfigurationen
+  ├─ orders           → Bestellanfragen
+  ├─ order_items      → Bestell-Positionen
+  └─ auth.users       → Authentifizierung (Supabase-intern)</div>
+
+<h3>2.3 Nutzerrollen</h3>
+<table>
+  <tr><th>Rolle</th><th>Preise sichtbar</th><th>PDF-Export</th><th>Config speichern</th><th>Admin-Panel</th></tr>
+  <tr><td><code>customer</code> (Endkunde)</td><td>Nein</td><td>Nur Datenblatt</td><td>Ja (öffentl. Code)</td><td>Nein</td></tr>
+  <tr><td><code>dealer</code> (Händler)</td><td>EK-Preise</td><td>Angebot + Datenblatt</td><td>Ja</td><td>Nein</td></tr>
+  <tr><td><code>admin</code></td><td>UVP-Preise</td><td>Alle</td><td>Ja</td><td>Ja</td></tr>
+</table>
+
+<!-- ================================================================ -->
+<h2 id="s3">3. Hosting &amp; Infrastruktur</h2>
+
+<div class="grid-2">
+  <div class="card">
+    <h3 style="margin-top:0">Vercel (Frontend + API)</h3>
+    <ul>
+      <li><strong>Dienst:</strong> Vercel Inc., San Francisco, USA</li>
+      <li><strong>Funktion:</strong> Hosting der Next.js-App (Frontend + Serverless API-Routen)</li>
+      <li><strong>CDN:</strong> Globales Edge Network (statische Assets)</li>
+      <li><strong>Serverless Functions:</strong> Node.js-Runtime für API-Routen</li>
+      <li><strong>Verschlüsselung:</strong> TLS/HTTPS erzwungen (HSTS Preload)</li>
+      <li><strong>Environment Variables:</strong> Verschlüsselt in Vercel-Projekteinstellungen</li>
+      <li><strong>Logs:</strong> Serverless Function Logs (Vercel-Retention-Policy)</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">Supabase (Datenbank + Auth)</h3>
+    <ul>
+      <li><strong>Dienst:</strong> Supabase Inc. (Open Source, AWS-basiert)</li>
+      <li><strong>Funktion:</strong> PostgreSQL-Datenbank, Auth, Row-Level Security</li>
+      <li><strong>Region:</strong> Konfigurierbar (EU-Region empfohlen, z.B. Frankfurt)</li>
+      <li><strong>Verschlüsselung at Rest:</strong> AES-256 (AWS RDS)</li>
+      <li><strong>Verschlüsselung in Transit:</strong> TLS 1.2+</li>
+      <li><strong>Backups:</strong> Tägliche automatische Backups (Supabase Pro)</li>
+      <li><strong>RLS:</strong> Auf allen Tabellen aktiviert</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0">GitHub (Quellcodeverwaltung)</h3>
+  <ul>
+    <li><strong>Dienst:</strong> GitHub Inc. (Microsoft), USA</li>
+    <li><strong>Funktion:</strong> Versionskontrolle (Git), CI/CD-Trigger für Vercel</li>
+    <li><strong>Personenbezogene Daten:</strong> Keine &mdash; Repository enthält nur Quellcode, keine Nutzerdaten</li>
+    <li><strong>Secrets:</strong> <code>.env.local</code> ist via <code>.gitignore</code> ausgeschlossen, niemals im Repository</li>
+    <li><strong>Zugriff:</strong> Privates Repository, nur autorisierte Entwickler</li>
+  </ul>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="s4">4. Datenverarbeitung &mdash; Wo werden welche Daten verarbeitet?</h2>
+
+<h3>4.1 Übersicht: Personenbezogene Daten</h3>
+<table>
+  <tr><th>Datenkategorie</th><th>Erhoben bei</th><th>Verarbeitet in</th><th>Gespeichert in</th><th>Zweck</th></tr>
+  <tr>
+    <td>Name, E-Mail</td>
+    <td>Bestellformular</td>
+    <td>Vercel API-Route</td>
+    <td>Supabase (<code>orders</code>)</td>
+    <td>Bestellabwicklung</td>
+  </tr>
+  <tr>
+    <td>Telefon, Firma, Adresse</td>
+    <td>Bestellformular (optional)</td>
+    <td>Vercel API-Route</td>
+    <td>Supabase (<code>orders</code>)</td>
+    <td>Kontaktaufnahme</td>
+  </tr>
+  <tr>
+    <td>E-Mail + Passwort</td>
+    <td>Händler-Login</td>
+    <td>Supabase Auth</td>
+    <td>Supabase (<code>auth.users</code>)</td>
+    <td>Authentifizierung</td>
+  </tr>
+  <tr>
+    <td>Firma (Händler-Profil)</td>
+    <td>Registrierung</td>
+    <td>Supabase Trigger</td>
+    <td>Supabase (<code>profiles</code>)</td>
+    <td>Rollenzuweisung</td>
+  </tr>
+  <tr>
+    <td>DSGVO-Einwilligungszeitpunkt</td>
+    <td>Bestellformular</td>
+    <td>Vercel API-Route</td>
+    <td>Supabase (<code>orders.gdpr_consent_at</code>)</td>
+    <td>Nachweis der Einwilligung</td>
+  </tr>
+  <tr>
+    <td>IP-Adresse</td>
+    <td>Jeder Request</td>
+    <td>Vercel Middleware (RAM)</td>
+    <td><strong>Nicht persistent</strong> (nur In-Memory Rate-Limit)</td>
+    <td>Rate Limiting / Missbrauchsschutz</td>
+  </tr>
+</table>
+
+<h3>4.2 Übersicht: Technische / nicht-personenbezogene Daten</h3>
+<table>
+  <tr><th>Datenkategorie</th><th>Gespeichert in</th><th>Zugriff</th><th>Zweck</th></tr>
+  <tr>
+    <td>Möbelkonfiguration (JSON)</td>
+    <td>Supabase (<code>saved_configs</code>)</td>
+    <td>Öffentlich via 8-stelligem Code</td>
+    <td>Konfiguration teilen &amp; laden</td>
+  </tr>
+  <tr>
+    <td>3D-Screenshot (PNG als DataURL)</td>
+    <td>Supabase (<code>saved_configs.screenshot</code>)</td>
+    <td>Öffentlich via Code</td>
+    <td>Vorschaubild für PDF/Warenkorb</td>
+  </tr>
+  <tr>
+    <td>Stückliste (BOM)</td>
+    <td>Wird on-demand berechnet (nicht persistent)</td>
+    <td>API-Antwort</td>
+    <td>Materialberechnung</td>
+  </tr>
+  <tr>
+    <td>Preisliste (EUR/CHF)</td>
+    <td>Supabase (<code>article_prices</code>)</td>
+    <td>Öffentlich lesbar (RLS), Admin-schreibbar</td>
+    <td>Preiskalkulation</td>
+  </tr>
+  <tr>
+    <td>Warenkorb</td>
+    <td>Browser <code>localStorage</code></td>
+    <td>Nur lokaler Browser</td>
+    <td>Zusammenstellung von Konfigurationen</td>
+  </tr>
+  <tr>
+    <td>Cookie-Bestätigung</td>
+    <td>Browser <code>localStorage</code></td>
+    <td>Nur lokaler Browser</td>
+    <td>Cookie-Banner-Status</td>
+  </tr>
+</table>
+
+<h3>4.3 Datenfluss-Diagramm</h3>
+<div class="diagram"><span class="b">Endkunde (Browser)</span>
+  │
+  ├──<span class="g"> Konfiguration erstellen</span> → kein Netzwerk, rein clientseitig
+  │   └─ 3D-Vorschau: WebGL/Three.js (lokal, keine externen Aufrufe)
+  │
+  ├──<span class="g"> Konfiguration speichern</span> → POST /api/config/save
+  │   └─ Vercel → Supabase (saved_configs) → 8-stelliger Code zurück
+  │
+  ├──<span class="g"> Stückliste berechnen</span> → POST /api/bom
+  │   └─ Vercel berechnet BOM + holt Preise aus Supabase (article_prices)
+  │
+  ├──<span class="hl"> Bestellung absenden</span> → POST /api/orders
+  │   ├─ Vercel → Supabase (orders + order_items)
+  │   ├─ Vercel → SMTP → Kunden-E-Mail (Bestätigung)
+  │   └─ Vercel → SMTP → Admin-E-Mail (info@artmodul.com)
+  │
+  └──<span class="g"> PDF/Datenblatt</span> → POST /api/datasheet
+      └─ Vercel rendert PDF serverseitig → Download an Browser
+
+<span class="r">Kein Datenfluss zu:</span>
+  ✗ Google Analytics / Tracking-Dienste
+  ✗ Werbenetzwerke / Retargeting
+  ✗ Social-Media-Plugins
+  ✗ Externe CDNs für Anwendungsdaten
+  ✗ Zahlungsdienstleister (kein Payment)</div>
+
+<h3>4.4 E-Mail-Versand</h3>
+<div class="card">
+  <p><strong>Auslöser:</strong> Bestellanfrage über <code>POST /api/orders</code></p>
+  <p><strong>Empfänger:</strong></p>
+  <ul>
+    <li>Kunde: Bestellbestätigung (Name, Bestellnummer, Konfigurations-Codes)</li>
+    <li>Admin: Benachrichtigung an <code>info@artmodul.com</code> (Kundendaten + Konfigurationen)</li>
+  </ul>
+  <p><strong>Transport:</strong> SMTP über MHZ-eigenen Mailserver (konfiguriert via Umgebungsvariablen)</p>
+  <p><strong>Sicherheit:</strong> HTML-Templates verwenden <code>esc()</code>-Funktion gegen XSS-Injection. E-Mail-Versand ist optional &mdash; Bestellung wird auch ohne SMTP erfolgreich angelegt.</p>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="s5">5. Sicherheitsarchitektur</h2>
+
+<h3>5.1 Authentifizierung (3 Schichten)</h3>
+<table>
+  <tr><th>Schicht</th><th>Mechanismus</th><th>Schützt</th><th>Details</th></tr>
+  <tr>
+    <td>1. Beta-Schutz</td>
+    <td>HTTP Basic Auth</td>
+    <td>Gesamte Anwendung</td>
+    <td>Benutzername/Passwort via <code>BETA_USER</code> / <code>BETA_PASSWORD</code>. Fail-Safe: 503 wenn nicht konfiguriert.</td>
+  </tr>
+  <tr>
+    <td>2. Supabase Auth</td>
+    <td>Session-basiert (JWT)</td>
+    <td>Händler- und Admin-Bereiche</td>
+    <td>Rollen: <code>customer</code>, <code>dealer</code>, <code>admin</code>. Session-Erneuerung bei jedem Request.</td>
+  </tr>
+  <tr>
+    <td>3. Admin-Cookie</td>
+    <td>HMAC-SHA256 signiert</td>
+    <td><code>/admin/*</code> Routen</td>
+    <td>8h Gültigkeit. HttpOnly, Secure, SameSite=Strict. Timing-Safe Verifikation.</td>
+  </tr>
+</table>
+
+<h3>5.2 Autorisierung (Datenbank-Ebene)</h3>
+<table>
+  <tr><th>Tabelle</th><th>SELECT</th><th>INSERT</th><th>UPDATE</th><th>DELETE</th></tr>
+  <tr><td><code>profiles</code></td><td>Eigenes Profil + Admin</td><td>Automatisch (Trigger)</td><td>Eigenes Profil + Admin</td><td>&mdash;</td></tr>
+  <tr><td><code>article_prices</code></td><td>Öffentlich</td><td>Nur Admin</td><td>Nur Admin</td><td>Nur Admin</td></tr>
+  <tr><td><code>saved_configs</code></td><td>Öffentlich</td><td>Öffentlich</td><td>&mdash;</td><td>&mdash;</td></tr>
+  <tr><td><code>orders</code></td><td>Nur Service-Key</td><td>Öffentlich</td><td>&mdash;</td><td>&mdash;</td></tr>
+  <tr><td><code>order_items</code></td><td>Nur Service-Key</td><td>Öffentlich</td><td>&mdash;</td><td>&mdash;</td></tr>
+</table>
+<p><strong>Defense-in-Depth:</strong> Zusätzlich zu RLS-Policies verhindert ein PostgreSQL-Trigger (<code>protect_role_and_discount</code>), dass Nicht-Admins die Felder <code>role</code> oder <code>discount_pct</code> in der Profiltabelle ändern können &mdash; selbst bei Bypass der RLS-Ebene.</p>
+
+<h3>5.3 Rate Limiting</h3>
+<table>
+  <tr><th>Route</th><th>Limit</th><th>Zeitfenster</th></tr>
+  <tr><td><code>/api/orders</code></td><td>5 Anfragen</td><td>pro Minute</td></tr>
+  <tr><td><code>/api/config/save</code></td><td>10 Anfragen</td><td>pro Minute</td></tr>
+  <tr><td><code>/api/admin/auth</code></td><td>10 Anfragen</td><td>pro 15 Minuten</td></tr>
+  <tr><td><code>/api/offer</code></td><td>10 Anfragen</td><td>pro Minute</td></tr>
+  <tr><td><code>/api/*</code> (Standard)</td><td>60 Anfragen</td><td>pro Minute</td></tr>
+</table>
+<p><strong>Implementierung:</strong> In-Memory-Store pro Serverless-Instanz, mit automatischer Bereinigung alle 60 Sekunden. Bei Überschreitung: HTTP 429 mit <code>Retry-After</code>-Header.</p>
+
+<h3>5.4 HTTP-Security-Headers</h3>
+<table>
+  <tr><th>Header</th><th>Wert</th><th>Zweck</th></tr>
+  <tr><td>Strict-Transport-Security</td><td>max-age=63072000; includeSubDomains; preload</td><td>HTTPS erzwingen (2 Jahre)</td></tr>
+  <tr><td>X-Content-Type-Options</td><td>nosniff</td><td>MIME-Sniffing verhindern</td></tr>
+  <tr><td>X-Frame-Options</td><td>DENY</td><td>Clickjacking verhindern</td></tr>
+  <tr><td>Referrer-Policy</td><td>strict-origin-when-cross-origin</td><td>Referrer-Informationen begrenzen</td></tr>
+  <tr><td>Permissions-Policy</td><td>camera=(), microphone=(), geolocation=()</td><td>Hardware-APIs deaktiviert</td></tr>
+  <tr><td>Content-Security-Policy</td><td>(siehe Details unten)</td><td>XSS-/Injection-Schutz</td></tr>
+</table>
+
+<h3>5.5 Content Security Policy (CSP)</h3>
+<table>
+  <tr><th>Direktive</th><th>Erlaubte Quellen</th><th>Anmerkung</th></tr>
+  <tr><td><code>default-src</code></td><td><code>'self'</code></td><td>Nur gleiche Herkunft als Standard</td></tr>
+  <tr><td><code>script-src</code></td><td><code>'self' 'unsafe-inline' 'unsafe-eval'</code> + unpkg.com, googleapis.com</td><td>unsafe-inline/eval für React erforderlich</td></tr>
+  <tr><td><code>style-src</code></td><td><code>'self' 'unsafe-inline'</code> + fonts.googleapis.com</td><td>Tailwind benötigt inline Styles</td></tr>
+  <tr><td><code>connect-src</code></td><td><code>'self' blob:</code> + *.supabase.co (HTTPS + WSS)</td><td>API-Verbindungen auf Supabase begrenzt</td></tr>
+  <tr><td><code>img-src</code></td><td><code>'self' data: blob:</code></td><td>Für Canvas-/Screenshot-Erzeugung</td></tr>
+  <tr><td><code>font-src</code></td><td><code>'self'</code> + fonts.gstatic.com</td><td>Google Fonts (self-hosted via Next.js)</td></tr>
+  <tr><td><code>frame-src</code></td><td><code>'self'</code></td><td>Keine externen iFrames erlaubt</td></tr>
+</table>
+
+<h3>5.6 Input-Validierung</h3>
+<p>Alle API-Endpunkte validieren eingehende Daten mit <strong>Zod</strong>-Schemas. Ungültige Anfragen werden mit HTTP 400 und detaillierter Fehlermeldung abgelehnt. Zusätzlich:</p>
+<ul>
+  <li>Konfigurations-Codes: Regex-Prüfung (<code>/^\d{8}$/</code>)</li>
+  <li>Alle Benutzereingaben werden getrimmt (Whitespace-Bereinigung)</li>
+  <li>E-Mail-Templates nutzen Entity-Encoding (<code>esc()</code>) gegen XSS</li>
+</ul>
+
+<!-- ================================================================ -->
+<h2 id="s6">6. DSGVO-Compliance</h2>
+
+<h3>6.1 Status der DSGVO-Anforderungen</h3>
+<table>
+  <tr><th>Anforderung</th><th>Status</th><th>Details</th></tr>
+  <tr>
+    <td>Datenschutzerklärung (Art. 13/14)</td>
+    <td><span class="status status-ok">Umgesetzt</span></td>
+    <td>Verfügbar unter <code>/datenschutz</code>, Stand April 2026. Enthält: Verantwortlicher, Zweck, Rechtsgrundlage, Datenkategorien, Speicherdauer, Empfänger, Betroffenenrechte, Cookie-Info.</td>
+  </tr>
+  <tr>
+    <td>Impressum (TMG §5)</td>
+    <td><span class="status status-ok">Umgesetzt</span></td>
+    <td>Verfügbar unter <code>/impressum</code> mit vollständigen Angaben.</td>
+  </tr>
+  <tr>
+    <td>Einwilligung bei Bestellung (Art. 6.1a)</td>
+    <td><span class="status status-ok">Umgesetzt</span></td>
+    <td>DSGVO-Checkbox im Bestellformular, Zeitpunkt wird in <code>gdpr_consent_at</code> gespeichert.</td>
+  </tr>
+  <tr>
+    <td>Cookies (ePrivacy Art. 5.3)</td>
+    <td><span class="status status-ok">Umgesetzt</span></td>
+    <td>Nur technisch notwendige Cookies. Cookie-Banner informiert, verlangt keine Einwilligung. Korrekt nach TTDSG §25.</td>
+  </tr>
+  <tr>
+    <td>Tracking / Analytics</td>
+    <td><span class="status status-ok">Nicht vorhanden</span></td>
+    <td>Keine Tracking-Tools, keine Analyse-Scripts, keine Third-Party-Pixel. Privacy by Design.</td>
+  </tr>
+  <tr>
+    <td>Datenminimierung (Art. 5.1c)</td>
+    <td><span class="status status-ok">Umgesetzt</span></td>
+    <td>Nur für Bestellabwicklung nötige Daten erhoben. Telefon, Adresse, Firma optional.</td>
+  </tr>
+  <tr>
+    <td>Verschlüsselung (Art. 32)</td>
+    <td><span class="status status-ok">Umgesetzt</span></td>
+    <td>TLS in Transit (HSTS Preload), AES-256 at Rest (Supabase/AWS).</td>
+  </tr>
+  <tr>
+    <td>Recht auf Auskunft (Art. 15)</td>
+    <td><span class="status status-warn">Manuell</span></td>
+    <td>Anfrage per E-Mail an <code>info@artmodul.com</code>. Kein Self-Service-Portal.</td>
+  </tr>
+  <tr>
+    <td>Recht auf Löschung (Art. 17)</td>
+    <td><span class="status status-warn">Manuell</span></td>
+    <td>Admin kann Daten in Supabase löschen. Kein automatisierter Prozess. Aufbewahrungsfristen (HGB/AO) beachten.</td>
+  </tr>
+  <tr>
+    <td>Datenübertragbarkeit (Art. 20)</td>
+    <td><span class="status status-warn">Manuell</span></td>
+    <td>Kein automatischer Datenexport-Endpunkt. Export manuell durch Admin möglich.</td>
+  </tr>
+  <tr>
+    <td>Auftragsverarbeitungsverträge (Art. 28)</td>
+    <td><span class="status status-open">Offen</span></td>
+    <td>AVV mit Vercel, Supabase und SMTP-Anbieter müssen geprüft/abgeschlossen werden.</td>
+  </tr>
+  <tr>
+    <td>Verzeichnis der Verarbeitungstätigkeiten (Art. 30)</td>
+    <td><span class="status status-open">Offen</span></td>
+    <td>Formales VVT muss erstellt werden (dieses Dokument kann als Grundlage dienen).</td>
+  </tr>
+  <tr>
+    <td>Datenschutz-Folgenabschätzung (Art. 35)</td>
+    <td><span class="status status-info">Nicht erforderlich</span></td>
+    <td>Kein hohes Risiko: kein Profiling, kein Tracking, keine besonderen Datenkategorien.</td>
+  </tr>
+</table>
+
+<h3>6.2 Cookies &amp; Client-Speicher im Detail</h3>
+<table>
+  <tr><th>Name / Key</th><th>Typ</th><th>Lebensdauer</th><th>Zweck</th><th>Einwilligungspflichtig?</th></tr>
+  <tr><td><code>sb-*</code> (Supabase Auth)</td><td>HTTP Cookie</td><td>Session (24h&ndash;7d)</td><td>Authentifizierung nach Login</td><td>Nein (technisch notwendig)</td></tr>
+  <tr><td><code>admin_session</code></td><td>HTTP Cookie</td><td>8 Stunden</td><td>Admin-Bereich-Zugang</td><td>Nein (technisch notwendig)</td></tr>
+  <tr><td><code>artmodul_cookie_ok</code></td><td>localStorage</td><td>Persistent</td><td>Cookie-Banner-Bestätigung</td><td>Nein (speichert Kenntnisnahme)</td></tr>
+  <tr><td><code>artmodul_offer_items</code></td><td>localStorage</td><td>Persistent</td><td>Warenkorb (Config-Codes)</td><td>Nein (funktional)</td></tr>
+</table>
+
+<!-- ================================================================ -->
+<h2 id="s7">7. Auftragsverarbeiter (Subprocessors)</h2>
+
+<table>
+  <tr><th>Dienstleister</th><th>Sitz</th><th>Funktion</th><th>Daten</th><th>Rechtsgrundlage</th><th>AVV-Status</th></tr>
+  <tr>
+    <td><strong>Vercel Inc.</strong></td>
+    <td>USA (EU-CDN verfügbar)</td>
+    <td>Hosting (Frontend, API, CDN)</td>
+    <td>HTTP-Requests, Server-Logs, Env-Vars (verschlüsselt)</td>
+    <td>EU-Standardvertragsklauseln (SCC)</td>
+    <td><span class="status status-warn">Prüfen</span></td>
+  </tr>
+  <tr>
+    <td><strong>Supabase Inc.</strong></td>
+    <td>USA (EU-Region wählbar)</td>
+    <td>Datenbank, Authentifizierung</td>
+    <td>Alle persistenten Daten (Bestellungen, Profile, Configs)</td>
+    <td>SCC / EU-Serverstandort</td>
+    <td><span class="status status-warn">Prüfen</span></td>
+  </tr>
+  <tr>
+    <td><strong>GitHub Inc.</strong> (Microsoft)</td>
+    <td>USA</td>
+    <td>Quellcodeverwaltung, CI/CD-Trigger</td>
+    <td>Quellcode (keine Nutzerdaten)</td>
+    <td>SCC / DPA vorhanden</td>
+    <td><span class="status status-info">N/A</span></td>
+  </tr>
+  <tr>
+    <td><strong>SMTP-Anbieter</strong> (MHZ-intern)</td>
+    <td>DE (vermutlich)</td>
+    <td>E-Mail-Versand</td>
+    <td>Kundendaten in E-Mails (Name, E-Mail, Bestellnr.)</td>
+    <td>Berechtigtes Interesse / Vertrag</td>
+    <td><span class="status status-warn">Klären</span></td>
+  </tr>
+  <tr>
+    <td><strong>Google LLC</strong> (CDN)</td>
+    <td>USA</td>
+    <td>model-viewer.min.js (nur AR-Seite)</td>
+    <td>IP-Adresse bei Script-Load</td>
+    <td>SCC</td>
+    <td><span class="status status-open">Offen</span></td>
+  </tr>
+</table>
+
+<!-- ================================================================ -->
+<h2 id="s8">8. Offene Punkte &amp; Handlungsempfehlungen</h2>
+
+<h3>8.1 DSGVO / Rechtlich</h3>
+
+<div class="card">
+  <div class="finding">
+    <span class="icon">&#9888;</span>
+    <div>
+      <strong>Auftragsverarbeitungsverträge (AVV) abschließen</strong><br>
+      <span class="status status-open">Priorität: Hoch</span><br>
+      Mit Vercel und Supabase müssen formale AVV gemäß Art. 28 DSGVO vorliegen. Beide Anbieter stellen Standard-DPAs bereit, die geprüft und akzeptiert werden müssen. Zuständig: DSGVO-Verantwortlicher.
+    </div>
+  </div>
+  <div class="finding">
+    <span class="icon">&#9888;</span>
+    <div>
+      <strong>Verzeichnis der Verarbeitungstätigkeiten (VVT)</strong><br>
+      <span class="status status-open">Priorität: Hoch</span><br>
+      Ein formales VVT gemäß Art. 30 DSGVO muss erstellt werden. Dieses Briefingpapier liefert die inhaltliche Grundlage.
+    </div>
+  </div>
+  <div class="finding">
+    <span class="icon">&#9888;</span>
+    <div>
+      <strong>Supabase-Region auf EU festlegen</strong><br>
+      <span class="status status-warn">Priorität: Hoch</span><br>
+      Es sollte sichergestellt werden, dass das Supabase-Projekt in einer EU-Region (z.B. <code>eu-central-1</code> Frankfurt) gehostet wird. Falls aktuell US-Region: Migration planen.
+    </div>
+  </div>
+  <div class="finding">
+    <span class="icon">&#8505;</span>
+    <div>
+      <strong>Google CDN für model-viewer (AR-Seite) in Datenschutzerklärung ergänzen</strong><br>
+      <span class="status status-warn">Priorität: Mittel</span><br>
+      Die AR-Vorschau-Seite lädt ein Script von <code>ajax.googleapis.com</code>. Die IP-Adresse des Nutzers wird dabei an Google übermittelt. Dies sollte in der Datenschutzerklärung erwähnt werden. Alternativ: Script lokal hosten.
+    </div>
+  </div>
+  <div class="finding">
+    <span class="icon">&#8505;</span>
+    <div>
+      <strong>Self-Service für Betroffenenrechte (optional)</strong><br>
+      <span class="status status-info">Priorität: Niedrig</span><br>
+      Aktuell werden Auskunfts-, Lösch- und Exportanfragen manuell bearbeitet. Bei steigendem Aufkommen könnte ein Self-Service-Endpunkt sinnvoll werden.
+    </div>
+  </div>
+</div>
+
+<h3>8.2 Technisch / Sicherheit</h3>
+
+<div class="card">
+  <div class="finding">
+    <span class="icon">&#9888;</span>
+    <div>
+      <strong>Rate Limiting auf Redis umstellen (Produktion)</strong><br>
+      <span class="status status-warn">Priorität: Mittel</span><br>
+      Aktuell In-Memory-Store &mdash; wird bei Serverless-Neustart zurückgesetzt und ist nicht instanz-übergreifend. Empfehlung: Upstash Redis (Vercel-kompatibel) für persistentes Rate Limiting.
+    </div>
+  </div>
+  <div class="finding">
+    <span class="icon">&#8505;</span>
+    <div>
+      <strong>CSP: <code>unsafe-inline</code> / <code>unsafe-eval</code> perspektivisch ersetzen</strong><br>
+      <span class="status status-info">Priorität: Niedrig</span><br>
+      Für React/Next.js aktuell erforderlich. Mittelfristig Nonce-basierte CSP evaluieren, um XSS-Schutz zu verbessern. Kein akuter Handlungsbedarf.
+    </div>
+  </div>
+  <div class="finding">
+    <span class="icon">&#8505;</span>
+    <div>
+      <strong>Beta-Schutz: Timing-Safe-Vergleich</strong><br>
+      <span class="status status-info">Priorität: Niedrig</span><br>
+      HTTP Basic Auth verwendet direkten String-Vergleich (kein <code>timingSafeEqual</code>). Theoretisches Timing-Angriffs-Risiko, praktisch irrelevant für Beta-Passwort.
+    </div>
+  </div>
+  <div class="finding">
+    <span class="icon">&#8505;</span>
+    <div>
+      <strong>Server-Logging / Monitoring</strong><br>
+      <span class="status status-info">Priorität: Niedrig</span><br>
+      Aktuell nur Vercel-Standard-Logs. Für Produktion ggf. strukturiertes Logging (z.B. fehlgeschlagene Admin-Logins) einrichten.
+    </div>
+  </div>
+</div>
+
+<h3>8.3 Funktional / Business</h3>
+
+<div class="card">
+  <div class="finding">
+    <span class="icon">&#9888;</span>
+    <div>
+      <strong>Beta-Modus vor Go-Live entfernen oder anpassen</strong><br>
+      <span class="status status-warn">Priorität: Vor Go-Live</span><br>
+      HTTP Basic Auth ist für die Betaphase vorgesehen. Vor Go-Live muss entschieden werden: entfernen (öffentlich) oder durch andere Zugangskontrolle ersetzen.
+    </div>
+  </div>
+  <div class="finding">
+    <span class="icon">&#8505;</span>
+    <div>
+      <strong>E-Mail-Zustellung sicherstellen</strong><br>
+      <span class="status status-warn">Priorität: Mittel</span><br>
+      SMTP ist optional konfiguriert. Vor Go-Live sicherstellen, dass Bestellbestätigungen und Admin-Benachrichtigungen zuverlässig zugestellt werden. Ggf. Retry-Mechanismus oder Queue einrichten.
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="s9">9. Gesamtbewertung</h2>
+
+<div class="card" style="border-left: 4px solid var(--green);">
+  <h3 style="margin-top:0; color: var(--green);">Sicherheit: Gut</h3>
+  <ul>
+    <li>Drei-Schichten-Authentifizierung (Basic Auth + Supabase + Admin-Cookie)</li>
+    <li>Row-Level Security auf allen Tabellen mit Defense-in-Depth (DB-Trigger)</li>
+    <li>Umfassende HTTP-Security-Headers inkl. HSTS Preload und CSP</li>
+    <li>Input-Validierung via Zod auf allen API-Endpunkten</li>
+    <li>Timing-Safe-Vergleiche für Admin-Authentifizierung</li>
+    <li>Secrets ausschließlich serverseitig, <code>.env.local</code> gitignored</li>
+  </ul>
+</div>
+
+<div class="card" style="border-left: 4px solid var(--green);">
+  <h3 style="margin-top:0; color: var(--green);">DSGVO: Grundsätzlich compliant</h3>
+  <ul>
+    <li>Keine Tracking-Tools, keine Analyse-Scripts &mdash; Privacy by Design</li>
+    <li>Nur technisch notwendige Cookies</li>
+    <li>Datenschutzerklärung und Impressum vorhanden und aktuell</li>
+    <li>DSGVO-Einwilligung bei Bestellung mit Zeitstempel</li>
+    <li>Datenminimierung: nur für Bestellabwicklung nötige Felder</li>
+  </ul>
+  <p style="margin-top:12px"><strong>Offene Maßnahmen:</strong> AVV mit Vercel/Supabase formalisieren, VVT erstellen, Supabase-Region verifizieren.</p>
+</div>
+
+<div class="card" style="border-left: 4px solid var(--amber);">
+  <h3 style="margin-top:0; color: var(--amber);">Vor Go-Live zu klären</h3>
+  <ol>
+    <li>AVV mit Vercel und Supabase prüfen/abschließen</li>
+    <li>Supabase-Region auf EU verifizieren</li>
+    <li>VVT erstellen (auf Basis dieses Briefings)</li>
+    <li>Beta-Schutz-Strategie für Produktivbetrieb festlegen</li>
+    <li>SMTP-Konfiguration für zuverlässigen E-Mail-Versand sicherstellen</li>
+    <li>Google CDN (model-viewer) in Datenschutzerklärung ergänzen oder lokal hosten</li>
+  </ol>
+</div>
+
+<div class="footer-note">
+  <p>Erstellt: 20. April 2026 &bull; Artmodul Konfigurator &bull; MHZ Hachtel GmbH<br>
+  Dieses Dokument basiert auf einer automatisierten Codebase-Analyse und ersetzt keine formale Datenschutz- oder Sicherheitsprüfung durch einen zertifizierten Auditor.</p>
+</div>
+
+</div>
+</body>
+</html>

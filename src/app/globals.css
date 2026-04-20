@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+/* ── Artmodul Design Tokens ─────────────────────────────────────────────── */
+@theme {
+  /* Markenfarben */
+  --color-primary:    #171614;   /* Artmodul Schwarz — Logo, Überschriften */
+  --color-accent:     #7A6448;   /* Bronze — sparsam einsetzen */
+  --color-accent-l:   #B8A082;   /* Bronze hell */
+  --color-accent-d:   #4E3E2A;   /* Bronze dunkel */
+
+  /* Basisfarben */
+  --color-paper:    #FAFAF8;
+  --color-warm:     #F0EDE7;
+  --color-rule:     #E0DDD7;
+  --color-mid:      #A8A49C;
+  --color-dim:      #787470;
+  --color-artbody:  #36342F;
+  --color-artblack: #171614;
+  --color-bronze:   #7A6448;
+  --color-bronze-l: #B8A082;
+  --color-bronze-d: #4E3E2A;
+
+  /* Zelltyp-Farben — zurückhaltend, fast neutral */
+  --color-cell-empty-bg:   #F0EDE7;
+  --color-cell-empty-bd:   #E0DDD7;
+  --color-cell-o-bg:       #FAFAF8;
+  --color-cell-o-bd:       #D8D4CE;
+  --color-cell-k-bg:       #F8F4E8;
+  --color-cell-k-bd:       #DDD4B0;
+  --color-cell-k-strip:    #C4A030;
+  --color-cell-s-bg:       #EEF5EE;
+  --color-cell-s-bd:       #B4D0B8;
+  --color-cell-s-strip:    #508860;
+  --color-cell-tr-bg:      #ECF0F8;
+  --color-cell-tr-bd:      #B0C4D8;
+  --color-cell-tr-strip:   #506880;
+  --color-cell-dt-bg:      #F0EDF6;
+  --color-cell-dt-bd:      #C4B4D8;
+  --color-cell-dt-strip:   #7060A8;
+
+  /* Schriften — Jost als UI-Font, DM Mono für tabellarische Daten */
+  --font-sans:  'Jost', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono:  'DM Mono', 'Menlo', monospace;
+  --font-serif: 'Cormorant Garamond', Georgia, serif;
+}
+
+/* ── Reset ──────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--color-paper);
+  color: var(--color-artbody);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Jost als einheitliche UI-Schrift — DM Mono nur für tabellarische Daten */
+button, select, input, textarea {
+  font-family: var(--font-sans);
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar        { width: 2px; height: 2px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: var(--color-rule); border-radius: 1px; }

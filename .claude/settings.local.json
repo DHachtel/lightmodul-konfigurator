@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)",
+      "Bash(netstat:*)",
+      "Bash(taskkill:*)",
+      "Bash(cmd:*)",
+      "Bash(npx next:*)",
+      "Bash(git:*)",
+      "Bash(npx eslint:*)",
+      "Bash(grep:*)",
+      "Bash(python3:*)",
+      "Bash(python:*)",
+      "Bash(node:*)",
+      "Bash(ls:*)",
+      "WebFetch(domain:www.artmodul.com)",
+      "WebFetch(domain:static.wixstatic.com)",
+      "Bash(claude:*)",
+      "Bash(winget upgrade:*)",
+      "Skill(code-review:code-review)"
+    ]
+  }
+}

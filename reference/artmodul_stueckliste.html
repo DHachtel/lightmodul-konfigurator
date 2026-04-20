@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARTMODUL — Konfigurator</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --white:    #ffffff;
+  --paper:    #f8f6f2;
+  --warm:     #eeebe4;
+  --rule:     #dddad3;
+  --mid:      #a8a49c;
+  --dim:      #7a7670;
+  --body:     #3a3834;
+  --black:    #1c1a17;
+  --bronze:   #8a7050;
+  --bronze-l: #c4ae8c;
+  --bronze-d: #5c4a34;
+
+  /* empty cell */
+  --tEMP:  #f2f0ec; --tEMPb: #d8d4cc;
+
+  /* type colors */
+  --tO:   #f8f6f2; --tOb:  #b0aca4;   /* open — part of furniture, no front */
+  --tK:   #fdf6e8; --tKb:  #d4a840;
+  --tS:   #edf5ee; --tSb:  #5a9468;
+  --tTR:  #eaeff6; --tTb:  #5a7898;
+  --tTL:  #eaeff6;
+  --tDT:  #f0edf8; --tDTb: #8070b8;
+
+  --serif: 'Cormorant Garamond', Georgia, serif;
+  --mono:  'DM Mono', monospace;
+  --sh:    0 1px 3px rgba(0,0,0,.07), 0 2px 8px rgba(0,0,0,.04);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--paper); color: var(--body);
+  font-family: var(--mono); font-size: 11px; line-height: 1.5;
+  height: 100vh; overflow: hidden;
+  display: flex; flex-direction: column;
+}
+
+/* ══ HEADER ══ */
+.header {
+  background: var(--white); border-bottom: 1px solid var(--rule);
+  padding: 0 22px; height: 48px;
+  display: flex; align-items: center; gap: 16px; flex-shrink: 0;
+}
+.logo { display: flex; align-items: center; gap: 9px; }
+.logo-mark {
+  width: 24px; height: 24px; background: var(--black);
+  display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
+  gap: 2px; padding: 2px; border-radius: 2px;
+}
+.logo-mark span { background: var(--white); border-radius: 1px; }
+.logo-mark span:nth-child(4) { background: var(--bronze); }
+.logo-name { font-family: var(--serif); font-weight: 600; font-size: 15px; letter-spacing: .14em; color: var(--black); text-transform: uppercase; }
+.logo-by { font-size: 9px; color: var(--mid); letter-spacing: .08em; margin-left: 1px; }
+.h-sep { width: 1px; height: 20px; background: var(--rule); }
+.h-info { font-size: 10px; color: var(--dim); }
+.h-info b { color: var(--body); font-weight: 400; }
+
+/* ══ GLOBAL BAR ══ */
+.global-bar {
+  background: var(--white); border-bottom: 1px solid var(--rule);
+  padding: 0 22px; height: 46px;
+  display: flex; align-items: center; gap: 16px; flex-shrink: 0;
+}
+.gb-group { display: flex; align-items: center; gap: 7px; }
+.gb-label { font-size: 9px; text-transform: uppercase; letter-spacing: .1em; color: var(--mid); white-space: nowrap; }
+.gb-sep { width: 1px; height: 18px; background: var(--rule); }
+
+/* Tiefe */
+.depth-btn {
+  padding: 2px 10px; border-radius: 2px;
+  border: 1px solid var(--rule); background: var(--white);
+  font-family: var(--mono); font-size: 10px; color: var(--dim);
+  cursor: pointer; transition: all .1s;
+}
+.depth-btn.active { background: var(--black); border-color: var(--black); color: var(--white); }
+.depth-btn:hover:not(.active) { border-color: var(--bronze-l); }
+
+/* Surface — dropdown + pills together */
+.surf-group { display: flex; align-items: center; gap: 6px; }
+.surf-select {
+  font-family: var(--mono); font-size: 10px;
+  background: var(--white); border: 1px solid var(--rule);
+  color: var(--body); border-radius: 2px;
+  padding: 2px 6px; cursor: pointer; outline: none;
+  height: 26px; min-width: 160px;
+}
+.surf-select:focus { border-color: var(--bronze-l); }
+.surf-pg-badge {
+  font-size: 9px; padding: 2px 7px; border-radius: 2px;
+  border: 1px solid var(--rule); background: var(--warm);
+  color: var(--dim); white-space: nowrap;
+}
+.surf-pg-badge.pg1 { background: #fdf6e4; border-color: #d4a840; color: #7a6030; }
+.surf-pg-badge.pg2 { background: #eaf0f8; border-color: #7090b8; color: #304a68; }
+.surf-pg-badge.pg3 { background: #e8f4ee; border-color: #60a878; color: #204838; }
+.surf-pg-badge.pg4 { background: #f8f0e8; border-color: #b07840; color: #583820; }
+
+/* Seiten toggles */
+.opt-toggle {
+  padding: 2px 9px; border-radius: 2px;
+  border: 1px solid var(--rule); background: var(--white);
+  font-family: var(--mono); font-size: 9px; color: var(--dim);
+  cursor: pointer; transition: all .1s;
+}
+.opt-toggle.on { background: #edf5ee; border-color: #5a9468; color: #2a5838; }
+
+/* ══ MAIN ══ */
+.main { flex: 1; display: grid; grid-template-columns: 1fr 300px; overflow: hidden; min-height: 0; }
+
+/* ══ CONFIGURATOR ══ */
+.cfg-side { display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid var(--rule); }
+.cfg-toolbar {
+  background: var(--white); border-bottom: 1px solid var(--rule);
+  padding: 6px 14px; display: flex; align-items: center; gap: 7px; flex-shrink: 0;
+}
+.tb-label { font-size: 9px; text-transform: uppercase; letter-spacing: .1em; color: var(--mid); }
+.ic-btn {
+  width: 22px; height: 22px; border-radius: 2px;
+  border: 1px solid var(--rule); background: var(--white);
+  font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--body); transition: all .1s; font-family: var(--mono); line-height: 1;
+}
+.ic-btn:hover { border-color: var(--bronze-l); background: var(--warm); }
+.tb-sep { width: 1px; height: 16px; background: var(--rule); }
+
+/* legend */
+.legend { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.leg-item { display: flex; align-items: center; gap: 4px; font-size: 9px; color: var(--dim); }
+.leg-dot { width: 8px; height: 8px; border-radius: 1px; border: 1px solid; }
+
+.si { font-size: 9px; color: var(--dim); margin-left: 6px; }
+.si-ok  { color: #4a7a5a; }
+.si-err { color: #c04a3a; }
+
+.cfg-scroll { flex: 1; overflow: auto; padding: 20px; }
+
+/* ══ GRID ══ */
+.grid-wrap { display: inline-flex; flex-direction: column; }
+.col-header-row { display: flex; gap: 3px; margin-bottom: 3px; }
+.col-hdr { display: flex; align-items: flex-end; justify-content: center; padding-bottom: 3px; }
+.col-hdr select, .row-lbl select {
+  font-family: var(--mono); font-size: 9px;
+  background: var(--white); border: 1px solid var(--rule);
+  color: var(--body); border-radius: 2px;
+  padding: 1px 1px; cursor: pointer; outline: none; text-align: center; width: 100%;
+}
+.col-hdr select:hover, .row-lbl select:hover { border-color: var(--bronze-l); }
+.grid-data-row { display: flex; gap: 3px; align-items: stretch; margin-bottom: 3px; }
+.row-lbl { flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; padding-right: 5px; }
+.row-lbl select { width: 58px; }
+
+/* ── CELL ── */
+.cell {
+  border: 1px solid var(--rule); border-radius: 2px;
+  display: flex; flex-direction: column; align-items: stretch;
+  position: relative; overflow: hidden; box-shadow: var(--sh);
+  transition: border-color .1s, background .1s; min-width: 0;
+}
+/* EMPTY = not part of furniture */
+.cell.empty {
+  background: var(--tEMP);
+  border-color: var(--tEMPb);
+  border-style: dashed;
+  box-shadow: none;
+  opacity: .55;
+}
+.cell.empty:hover { opacity: .8; border-color: var(--bronze-l); border-style: solid; }
+.cell.empty .cell-type-strip { background: var(--tEMPb); opacity: .4; }
+.cell.empty .cell-select-wrap select { color: var(--mid); font-style: italic; }
+
+/* type strip */
+.cell-type-strip { height: 3px; flex-shrink: 0; }
+.type-O  .cell-type-strip,
+.empty   .cell-type-strip { background: var(--rule); }
+.type-K  .cell-type-strip { background: var(--tKb); }
+.type-S  .cell-type-strip { background: var(--tSb); }
+.type-TR .cell-type-strip { background: var(--tTb); }
+.type-TL .cell-type-strip { background: var(--tTb); }
+.type-DT .cell-type-strip { background: var(--tDTb); }
+
+/* type tints */
+.type-O  { background: var(--tO);  border-color: #c8c4bc; }
+.type-K  { background: var(--tK);  border-color: #ecd898; }
+.type-S  { background: var(--tS);  border-color: #a0d0a8; }
+.type-TR { background: var(--tTR); border-color: #a0b8d0; }
+.type-TL { background: var(--tTL); border-color: #a0b8d0; }
+.type-DT { background: var(--tDT); border-color: #c0b0e0; }
+.cell.invalid { border-color: #e09090 !important; background: #fff4f4 !important; }
+.cell.invalid .cell-type-strip { background: #c04a3a !important; }
+
+/* cell dropdown */
+.cell-select-wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2px 2px; }
+.cell-select-wrap select {
+  width: 100%; font-family: var(--mono); font-size: 9px;
+  background: transparent; border: none;
+  color: var(--body); cursor: pointer; outline: none;
+  text-align: center; text-align-last: center;
+}
+.type-K  .cell-select-wrap select { color: #7a5a10; }
+.type-S  .cell-select-wrap select { color: #2a5838; }
+.type-TR .cell-select-wrap select,
+.type-TL .cell-select-wrap select { color: #1a3858; }
+.type-DT .cell-select-wrap select { color: #403070; }
+.type-O  .cell-select-wrap select { color: var(--dim); }
+
+/* surface dot */
+.surf-dot {
+  position: absolute; bottom: 3px; right: 3px;
+  width: 5px; height: 5px; border-radius: 50%; pointer-events: none;
+}
+
+/* ══ BOM PANEL ══ */
+.bom-side { display: flex; flex-direction: column; overflow: hidden; background: var(--white); }
+.bom-hdr { padding: 13px 18px 10px; border-bottom: 1px solid var(--rule); flex-shrink: 0; }
+.bom-title { font-family: var(--serif); font-weight: 600; font-size: 15px; letter-spacing: .02em; color: var(--black); }
+.bom-meta { font-size: 9px; color: var(--dim); margin-top: 3px; line-height: 1.6; }
+.bom-scroll { flex: 1; overflow-y: auto; padding: 11px 18px; }
+
+.totals { display: grid; grid-template-columns: repeat(3,1fr); gap: 5px; margin-bottom: 11px; }
+.tot-card { border: 1px solid var(--rule); border-radius: 2px; padding: 6px 5px; text-align: center; background: var(--paper); }
+.tot-val { display: block; font-family: var(--serif); font-size: 20px; font-weight: 600; color: var(--black); line-height: 1; }
+.tot-lbl { font-size: 8px; text-transform: uppercase; letter-spacing: .08em; color: var(--mid); margin-top: 2px; }
+
+.bom-group { margin-bottom: 9px; }
+.bg-hd { font-size: 8px; text-transform: uppercase; letter-spacing: .12em; color: var(--mid); padding: 3px 8px; background: var(--warm); border: 1px solid var(--rule); border-radius: 2px 2px 0 0; }
+.b-row { display: grid; grid-template-columns: 1fr auto; gap: 6px; padding: 4px 8px; border: 1px solid var(--rule); border-top: none; align-items: start; background: var(--white); }
+.b-row:last-child { border-radius: 0 0 2px 2px; }
+.b-row:hover { background: var(--paper); }
+.b-row.zero { opacity: .3; }
+.b-name { font-size: 10px; color: var(--body); line-height: 1.4; }
+.b-sub  { font-size: 9px; color: var(--dim); margin-top: 1px; }
+.b-qty  { font-family: var(--serif); font-size: 15px; font-weight: 600; color: var(--black); text-align: right; white-space: nowrap; }
+.b-qty.z { color: var(--mid); font-size: 11px; font-family: var(--mono); font-weight: 300; }
+.hl { color: var(--bronze-d); }
+
+.warn-box { padding: 4px 8px; background: #fffaee; border: 1px solid #e8d080; border-radius: 2px; margin-bottom: 4px; font-size: 9px; color: #7a5a10; display: flex; gap: 6px; }
+.info-box { padding: 4px 8px; background: var(--warm); border: 1px solid var(--rule); border-radius: 2px; margin-bottom: 8px; font-size: 9px; color: var(--dim); }
+
+/* Swatches */
+.swatch {
+  width: 22px; height: 22px; border-radius: 3px;
+  border: 2px solid transparent;
+  cursor: pointer; flex-shrink: 0;
+  transition: transform .1s, box-shadow .1s;
+  padding: 0; outline: none;
+}
+.swatch:hover { transform: scale(1.15); box-shadow: 0 2px 6px rgba(0,0,0,.2); }
+.swatch.active { box-shadow: 0 0 0 2px var(--white), 0 0 0 4px var(--bronze); transform: scale(1.08); }
+.swatch-none {
+  background: var(--warm) !important; border-color: var(--rule) !important;
+  color: var(--dim); font-size: 13px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono);
+}
+.swatch-none.active { box-shadow: 0 0 0 2px var(--white), 0 0 0 4px var(--mid); }
+
+/* Shelves control inside cell */
+.shelf-ctrl { display:flex; align-items:center; justify-content:center; gap:2px; padding:2px 3px 3px; flex-shrink:0; }
+.shelf-btn { width:14px; height:14px; border-radius:2px; border:1px solid var(--rule); background:var(--white); color:var(--dim); font-size:11px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; font-family:var(--mono); padding:0; flex-shrink:0; }
+.shelf-btn:hover { border-color:var(--bronze-l); color:var(--bronze-d); background:var(--warm); }
+.shelf-val { font-family:var(--mono); font-size:9px; color:var(--bronze-d); min-width:10px; text-align:center; }
+.shelf-label { font-size:8px; color:var(--mid); letter-spacing:.03em; white-space:nowrap; }
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">
+    <div class="logo-mark"><span></span><span></span><span></span><span></span></div>
+    <span class="logo-name">Artmodul</span>
+    <span class="logo-by">by MHZ</span>
+  </div>
+  <div class="h-sep"></div>
+  <div class="h-info" id="h-info">Konfigurator</div>
+</div>
+
+<!-- GLOBAL BAR -->
+<div class="global-bar">
+
+  <div class="gb-group">
+    <span class="gb-label">Tiefe</span>
+    <button class="depth-btn active" data-d="360" onclick="setDepth(360)">360 mm</button>
+    <button class="depth-btn"        data-d="580" onclick="setDepth(580)">580 mm</button>
+  </div>
+
+  <div class="gb-sep"></div>
+
+  <div class="gb-group" style="align-items:center;gap:8px">
+    <span class="gb-label">Oberfläche</span>
+    <div id="swatch-bar" style="display:flex;gap:3px;align-items:center"></div>
+    <div class="surf-pg-badge" id="surf-badge">—</div>
+    <span id="surf-name" style="font-size:10px;color:var(--body);min-width:80px"></span>
+  </div>
+
+  <div class="gb-sep"></div>
+
+  <div class="gb-group">
+    <span class="gb-label">Seiten</span>
+    <button class="opt-toggle on" id="opt-outer" onclick="toggleOpt('outer')">Außen</button>
+    <button class="opt-toggle"    id="opt-inner" onclick="toggleOpt('inner')">Innen</button>
+  </div>
+
+  <div class="gb-sep"></div>
+
+  <div class="gb-group">
+    <span class="gb-label">Griff</span>
+    <select class="surf-select" id="handle-select" onchange="setHandle(this.value)" style="min-width:170px">
+      <option value="none">— kein Griff</option>
+      <option value="push">Push to open / Blanko</option>
+      <option value="luno">Luno</option>
+      <option value="linea">Linea</option>
+      <option value="rondo">Rondo</option>
+      <option value="axio">Axio</option>
+      <option value="axio_gross">Axio groß</option>
+      <option value="retrox">Retrox</option>
+      <option value="reling">Reling</option>
+      <option value="reling_gross">Reling groß</option>
+      <option value="uno">Uno</option>
+      <option value="ombra">Ombra</option>
+      <option value="solano">Solano</option>
+      <option value="arcano">Arcano</option>
+      <option value="bridge">Bridge</option>
+      <option value="bridge_gross">Bridge groß</option>
+      <option value="allungo">Allungo</option>
+    </select>
+    <span id="handle-warn" style="font-size:9px;color:#c04a3a;display:none">⚑ Pflicht</span>
+  </div>
+
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- CONFIGURATOR -->
+  <div class="cfg-side">
+    <div class="cfg-toolbar">
+      <span class="tb-label">Spalten</span>
+      <button class="ic-btn" onclick="addCol()">+</button>
+      <button class="ic-btn" onclick="removeCol()">−</button>
+      <div class="tb-sep"></div>
+      <span class="tb-label">Zeilen</span>
+      <button class="ic-btn" onclick="addRow()">+</button>
+      <button class="ic-btn" onclick="removeRow()">−</button>
+
+      <!-- legend -->
+      <div class="legend">
+        <div class="leg-item"><div class="leg-dot" style="background:var(--tEMP);border-color:var(--tEMPb)"></div>leer</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--tO);border-color:#c8c4bc"></div>offen</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--tK);border-color:var(--tKb)"></div>Klappe</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--tS);border-color:var(--tSb)"></div>Schublade</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--tTR);border-color:var(--tTb)"></div>Tür</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--tDT);border-color:var(--tDTb)"></div>Doppeltür</div>
+      </div>
+
+      <span class="si" id="si">—</span>
+    </div>
+    <div class="cfg-scroll" id="cfg-scroll"></div>
+  </div>
+
+  <!-- BOM -->
+  <div class="bom-side">
+    <div class="bom-hdr">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div class="bom-title">Stückliste</div>
+        <button onclick="exportXLS()" id="btn-export" style="
+          font-family:var(--mono);font-size:9px;
+          padding:4px 10px;border-radius:2px;cursor:pointer;
+          border:1px solid var(--bronze-l);background:var(--white);
+          color:var(--bronze-d);white-space:nowrap;
+          transition:all .1s;letter-spacing:.04em;
+        " onmouseover="this.style.background='var(--warm)'" onmouseout="this.style.background='var(--white)'">
+          ↓ XLS
+        </button>
+      </div>
+      <div class="bom-meta" id="bom-meta">—</div>
+    </div>
+    <div class="bom-scroll">
+      <div class="totals">
+        <div class="tot-card"><span class="tot-val" id="t-w">—</span><div class="tot-lbl">Würfel</div></div>
+        <div class="tot-card"><span class="tot-val" id="t-p">—</span><div class="tot-lbl">Profile</div></div>
+        <div class="tot-card"><span class="tot-val" id="t-pl">—</span><div class="tot-lbl">Platten</div></div>
+        <div class="tot-card"><span class="tot-val" id="t-fr">—</span><div class="tot-lbl">Fronten</div></div>
+        <div class="tot-card"><span class="tot-val" id="t-be">—</span><div class="tot-lbl">Beschläge</div></div>
+        <div class="tot-card"><span class="tot-val" id="t-kl">—</span><div class="tot-lbl">Kleinteile</div></div>
+      </div>
+      <div id="warnings"></div>
+      <div id="bom-out"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════
+const WIDTHS  = [420, 580, 780, 980];
+const HEIGHTS = [180, 360, 580, 660, 720, 1080, 1440, 1800];
+const MAX_B = 8, MAX_H = 10;
+const ROW_LBL_W = 72;
+const COL_HDR_H = 28;  // px height of column header row
+const GAP = 3;         // gap between cells
+const SCROLL_PAD = 20; // padding inside cfg-scroll
+
+// Dynamically compute cell sizes to fill the available grid area
+function getCellSizes() {
+  const scrollEl = document.getElementById('cfg-scroll');
+  if (!scrollEl) return { cws: ST.cols.map(()=>120), chs: ST.rows.map(()=>80) };
+
+  const availW = scrollEl.clientWidth  - SCROLL_PAD*2 - ROW_LBL_W - GAP*(ST.cols.length);
+  const availH = scrollEl.clientHeight - SCROLL_PAD*2 - COL_HDR_H - GAP*(ST.rows.length);
+
+  // Distribute proportionally based on mm width/height
+  const totalColMM = ST.cols.reduce((a,b)=>a+b, 0);
+  const totalRowMM = ST.rows.reduce((a,b)=>a+b, 0);
+
+  const cws = ST.cols.map(w => Math.max(52, Math.round(availW * w / totalColMM)));
+  const chs = ST.rows.map(h => Math.max(36, Math.round(availH * h / totalRowMM)));
+
+  return { cws, chs };
+}
+
+// '' = leer (not part of furniture)
+// 'O' = offen (part, no front)
+// 'K','S','TR','TL','DT' = fronted types
+const CELL_TYPES = [
+  { v: '',   l: '— leer'     },
+  { v: 'O',  l: 'Offen'      },
+  { v: 'K',  l: 'Klappe'     },
+  { v: 'S',  l: 'Schublade'  },
+  { v: 'TR', l: 'Tür rechts' },
+  { v: 'TL', l: 'Tür links'  },
+  { v: 'DT', l: 'Doppeltür'  },
+];
+
+const MAT_PG = {
+  KHW:'PG1',KHS:'PG1',KHA:'PG1',KHRR:'PG1',KHOR:'PG1',KHZG:'PG1',KHDG:'PG1',KHDB:'PG1',KHSB:'PG1',
+  ALG:'PG2', FLG:'PG3',VSG:'PG3', EIC:'PG4',NUS:'PG4',ZEB:'PG4', none:'—'
+};
+const PG_DOT = { PG1:'#c4a040', PG2:'#5080b0', PG3:'#508070', PG4:'#906040', '—':'transparent' };
+
+
+// ── GRIFF / HANDLE LIST ──
+const HANDLES = [
+  { v:'none',         l:'— kein Griff',       lb: null },
+  { v:'push',         l:'Push to open / Blanko', lb: null },
+  { v:'luno',         l:'Luno',                lb: null },
+  { v:'linea',        l:'Linea',               lb: 96   },
+  { v:'rondo',        l:'Rondo',               lb: null },
+  { v:'axio',         l:'Axio',                lb: null },
+  { v:'axio_gross',   l:'Axio groß',           lb: 128  },
+  { v:'retrox',       l:'Retrox',              lb: null },
+  { v:'reling',       l:'Reling',              lb: 96   },
+  { v:'reling_gross', l:'Reling groß',         lb: 128  },
+  { v:'uno',          l:'Uno',                 lb: 96   },
+  { v:'ombra',        l:'Ombra',               lb: 96   },
+  { v:'solano',       l:'Solano',              lb: 96   },
+  { v:'arcano',       l:'Arcano',              lb: 128  },
+  { v:'bridge',       l:'Bridge',              lb: 96   },
+  { v:'bridge_gross', l:'Bridge groß',         lb: 128  },
+  { v:'allungo',      l:'Allungo',             lb: 128  },
+];
+const HANDLE_BY_V = Object.fromEntries(HANDLES.map(h=>[h.v,h]));
+function setHandle(v) { ST.handle=v; calc(); }
+
+// ═══════════════════════════════════
+// STATE
+// ═══════════════════════════════════
+const ST = {
+  cols:  [420, 580, 420],
+  rows:  [360, 360, 360, 360],
+  grid:  [],           // [r][c] = { type: '' | 'O' | 'K' | 'S' | 'TR' | 'TL' | 'DT' }
+  depth:   360,
+  surface: 'none',
+  opts: { outer: true, inner: false },
+  handle: 'none',
+};
+
+function newCell() { return { type: '', shelves: 0 }; }  // default = leer
+
+function ensureGrid() {
+  const R = ST.rows.length, C = ST.cols.length;
+  ST.grid.length = R;
+  for (let r = 0; r < R; r++) {
+    if (!ST.grid[r]) ST.grid[r] = [];
+    ST.grid[r].length = C;
+    for (let c = 0; c < C; c++)
+      if (!ST.grid[r][c]) ST.grid[r][c] = newCell();
+  }
+}
+
+function cw(c, sizes) { return sizes ? sizes.cws[c] : 100; }
+function ch(r, sizes) { return sizes ? sizes.chs[r] : 70; }
+
+function isEmpty(r, c)   { return ST.grid[r][c].type === ''; }
+function isInvalid(r, c) {
+  const t = ST.grid[r][c].type, w = ST.cols[c], h = ST.rows[r];
+  if (!t) return false;
+  if (t === 'S'  && (w > 980 || h > 360)) return true;
+  if ((t === 'TR'||t === 'TL'||t === 'DT') && w > 980) return true;
+  if (t === 'K'  && h > 980) return true;
+  return false;
+}
+
+// ═══════════════════════════════════
+// RENDER
+// ═══════════════════════════════════
+function render() {
+  ensureGrid();
+  const R = ST.rows.length, C = ST.cols.length;
+  const hasSurf = ST.surface !== 'none';
+  const matObj = MAT_BY_V[ST.surface];
+  const dotColor = matObj ? matObj.hex : 'transparent';
+
+  const sizes = getCellSizes();
+
+  let html = '<div class="grid-wrap">';
+
+  // Column headers (width dropdowns)
+  html += `<div class="col-header-row">
+    <div style="width:${ROW_LBL_W}px;flex-shrink:0"></div>`;
+  for (let c = 0; c < C; c++) {
+    html += `<div class="col-hdr" style="width:${cw(c,sizes)}px;${c>0?'margin-left:3px':''}">
+      <select onchange="setCol(${c},+this.value)">
+        ${WIDTHS.map(v=>`<option value="${v}"${v===ST.cols[c]?' selected':''}>${v}</option>`).join('')}
+      </select></div>`;
+  }
+  html += '</div>';
+
+  // Data rows
+  for (let r = 0; r < R; r++) {
+    html += `<div class="grid-data-row">
+      <div class="row-lbl" style="width:${ROW_LBL_W}px;height:${ch(r,sizes)}px">
+        <select onchange="setRow(${r},+this.value)">
+          ${HEIGHTS.map(v=>`<option value="${v}"${v===ST.rows[r]?' selected':''}>${v}</option>`).join('')}
+        </select></div>`;
+
+    for (let c = 0; c < C; c++) {
+      const d = ST.grid[r][c];
+      const empty = d.type === '';
+      const inv = isInvalid(r, c);
+      const cls = [
+        'cell',
+        empty ? 'empty' : `type-${d.type}`,
+        inv ? 'invalid' : '',
+      ].filter(Boolean).join(' ');
+
+      const opts = CELL_TYPES.map(f =>
+        `<option value="${f.v}"${f.v===d.type?' selected':''}>${f.l}</option>`
+      ).join('');
+
+      html += `<div class="${cls}"
+        style="width:${cw(c,sizes)}px;height:${ch(r,sizes)}px;${c>0?'margin-left:3px':''}"
+        title="${ST.cols[c]}×${ST.rows[r]}×${ST.depth}mm${inv?' ⚠ Maß überschritten':''}">
+        <div class="cell-type-strip"></div>
+        <div class="cell-select-wrap">
+          <select onchange="setType(${r},${c},this.value)">${opts}</select>
+        </div>
+        ${!empty ? `<div class="shelf-ctrl">
+          <button class="shelf-btn" onclick="setShelves(${r},${c},${(d.shelves||0)-1})" ${(d.shelves||0)===0?'disabled style="opacity:.3;cursor:default"':''}>−</button>
+          <span class="shelf-val">${d.shelves||0}</span>
+          <button class="shelf-btn" onclick="setShelves(${r},${c},${(d.shelves||0)+1})" ${(d.shelves||0)===5?'disabled style="opacity:.3;cursor:default"':''}>+</button>
+          <span class="shelf-label" style="margin-left:2px">${(d.shelves||0)>0?`<span style="color:var(--bronze-d);font-weight:400">FB·SY32</span>`:'FB'}</span>
+        </div>` : ''}
+        ${!empty && hasSurf && d.type!=='O'
+          ? `<div class="surf-dot" style="background:${dotColor}"></div>` : ''}
+      </div>`;
+    }
+    html += '</div>';
+  }
+  html += '</div>';
+  document.getElementById('cfg-scroll').innerHTML = html;
+
+  // Size indicator
+  const definedCells = ST.grid.flat().filter(d => d.type !== '').length;
+  const siEl = document.getElementById('si');
+  const oversize = C > MAX_B || R > MAX_H;
+  siEl.textContent = `${C}×${R} Raster · ${definedCells} Felder aktiv`;
+  siEl.className = 'si ' + (oversize ? 'si-err' : 'si-ok');
+
+  // Header
+  const totBmm = ST.cols.reduce((a,b)=>a+b,0);
+  const totHmm = ST.rows.reduce((a,b)=>a+b,0);
+  document.getElementById('h-info').innerHTML =
+    `${C}×${R} · Max. Außenmaß <b>${totBmm+30}×${totHmm+30}×${ST.depth+30}mm</b>`;
+
+  calc();
+}
+
+// ═══════════════════════════════════
+// INTERACTIONS
+// ═══════════════════════════════════
+function setType(r, c, v) { ST.grid[r][c].type = v; render(); }
+function setShelves(r, c, v) { ST.grid[r][c].shelves = Math.max(0, Math.min(5, +v)); render(); }
+function setCol(c, v)     { ST.cols[c] = v; render(); }
+function setRow(r, v)     { ST.rows[r] = v; render(); }
+
+function addCol()    { if (ST.cols.length >= MAX_B) return; ST.cols.push(420); ST.grid.forEach(row => row.push(newCell())); render(); }
+function removeCol() { if (ST.cols.length <= 1) return; ST.cols.pop(); ST.grid.forEach(row => row.pop()); render(); }
+function addRow()    { if (ST.rows.length >= MAX_H) return; ST.rows.push(360); ensureGrid(); ST.grid.push(Array.from({length:ST.cols.length}, newCell)); render(); }
+function removeRow() { if (ST.rows.length <= 1) return; ST.rows.pop(); ST.grid.pop(); render(); }
+
+function setDepth(d) {
+  ST.depth = d;
+  document.querySelectorAll('.depth-btn').forEach(b => b.classList.toggle('active', +b.dataset.d === d));
+  render();
+}
+
+// ─── SURFACE MATERIALS ───
+const MATERIALS = [
+  // PG1 Kunstharz — exact colors from artmodul.com imagery
+  { v:'none', l:'— keine', pg:'—',   hex:'#e8e4dc', border:'#c0bcb4', textured:false },
+  { v:'KHS',  l:'Schwarz',     pg:'PG1', hex:'#1c1a17', border:'#1c1a17', textured:false },
+  { v:'KHA',  l:'Anthrazit',   pg:'PG1', hex:'#6a6864', border:'#6a6864', textured:false },
+  { v:'KHSB', l:'Sandbeige',   pg:'PG1', hex:'#c8b89a', border:'#b8a888', textured:false },
+  { v:'KHW',  l:'Weiß',        pg:'PG1', hex:'#f4f2ee', border:'#d8d4cc', textured:false },
+  { v:'KHRR', l:'Rubinrot',    pg:'PG1', hex:'#8a1a28', border:'#8a1a28', textured:false },
+  { v:'KHOR', l:'Orange',      pg:'PG1', hex:'#d86820', border:'#d86820', textured:false },
+  { v:'KHZG', l:'Zinkgelb',    pg:'PG1', hex:'#d8c000', border:'#b0a000', textured:false },
+  { v:'KHDG', l:'Dunkelgrün',  pg:'PG1', hex:'#4a6030', border:'#4a6030', textured:false },
+  { v:'KHDB', l:'Dunkelblau',  pg:'PG1', hex:'#0a3048', border:'#0a3048', textured:false },
+  // PG4 Furnier (wood texture simulation via CSS gradient)
+  { v:'ZEB',  l:'Zebrano',     pg:'PG4', hex:'#c8a860', border:'#a88840', textured:true,
+    grad:'repeating-linear-gradient(168deg,#c8a860 0px,#b89850 3px,#d4b870 6px,#c0a058 9px,#c8a860 12px)' },
+  { v:'NUS',  l:'Nussbaum',    pg:'PG4', hex:'#6a3820', border:'#502a14', textured:true,
+    grad:'repeating-linear-gradient(172deg,#6a3820 0px,#803820 4px,#5a2818 8px,#703020 12px,#6a3820 16px)' },
+  { v:'EIC',  l:'Eiche',       pg:'PG4', hex:'#c09060', border:'#a07848', textured:true,
+    grad:'repeating-linear-gradient(170deg,#c09060 0px,#d0a870 3px,#b08050 6px,#c89868 9px,#c09060 12px)' },
+  // PG2 Aluminium
+  { v:'ALG',  l:'Alu glatt',   pg:'PG2', hex:'#c0c8d0', border:'#a8b0b8', textured:false },
+  // PG3 Glas
+  { v:'FLG',  l:'Klarglas',    pg:'PG3', hex:'#c0dcd8', border:'#90b8b4', textured:false },
+  { v:'VSG',  l:'Milchglas',   pg:'PG3', hex:'#d0e4e0', border:'#a8c8c4', textured:false },
+];
+const MAT_BY_V = Object.fromEntries(MATERIALS.map(m => [m.v, m]));
+
+function initSwatches() {
+  const bar = document.getElementById('swatch-bar');
+  // "none" reset button first
+  const noneM = MATERIALS[0];
+  bar.innerHTML = '';
+
+  // group separators
+  const groups = [
+    { label:'KH', items: MATERIALS.filter(m=>m.pg==='PG1') },
+    { label:'Furnier', items: MATERIALS.filter(m=>m.pg==='PG4') },
+    { label:'Alu', items: MATERIALS.filter(m=>m.pg==='PG2') },
+    { label:'Glas', items: MATERIALS.filter(m=>m.pg==='PG3') },
+  ];
+
+  // none button
+  const noneBtn = document.createElement('button');
+  noneBtn.className = 'swatch swatch-none active';
+  noneBtn.dataset.v = 'none';
+  noneBtn.title = '— keine Oberfläche';
+  noneBtn.innerHTML = '×';
+  noneBtn.onclick = () => setSurf('none');
+  bar.appendChild(noneBtn);
+
+  // separator
+  const sep0 = document.createElement('div');
+  sep0.style.cssText = 'width:1px;height:20px;background:var(--rule);margin:0 4px';
+  bar.appendChild(sep0);
+
+  for (const grp of groups) {
+    for (const m of grp.items) {
+      const btn = document.createElement('button');
+      btn.className = 'swatch';
+      btn.dataset.v = m.v;
+      btn.title = `${m.l} (${m.pg})`;
+      if (m.grad) {
+        btn.style.background = m.grad;
+      } else {
+        btn.style.background = m.hex;
+      }
+      btn.style.borderColor = m.border;
+      btn.onclick = () => setSurf(m.v);
+      bar.appendChild(btn);
+    }
+    // group sep
+    const sep = document.createElement('div');
+    sep.style.cssText = 'width:1px;height:20px;background:var(--rule);margin:0 3px';
+    bar.appendChild(sep);
+  }
+}
+
+function setSurf(v) {
+  ST.surface = v;
+  // Update swatch active state
+  document.querySelectorAll('.swatch').forEach(b => b.classList.toggle('active', b.dataset.v === v));
+  // Update badge + name
+  const m = MAT_BY_V[v];
+  const badge = document.getElementById('surf-badge');
+  const nameEl = document.getElementById('surf-name');
+  if (m) {
+    badge.textContent = m.pg;
+    badge.className = 'surf-pg-badge ' + (m.pg !== '—' ? m.pg.toLowerCase() : '');
+    nameEl.textContent = m.pg !== '—' ? m.l : '';
+  }
+  render();
+}
+
+// Keep old alias for compatibility
+function setSurfFromDropdown(v) { setSurf(v); }
+
+function toggleOpt(k) {
+  ST.opts[k] = !ST.opts[k];
+  document.getElementById('opt-' + k).classList.toggle('on', ST.opts[k]);
+  calc();
+}
+
+// ═══════════════════════════════════
+// CALCULATION ENGINE
+// Key insight: only non-empty cells contribute to BOM.
+// The "shape" of the furniture = all active cells.
+// We compute the bounding box of active cells and use
+// full-grid formulas but limited to the active rectangle.
+// Actually: the formulas assume a rectangular grid.
+// Active cells within that grid all count — including 'O' (open, no front).
+// Empty cells are not part of the furniture at all.
+//
+// Constraint: the active cells MUST form a contiguous rectangle
+// (as defined by the rules). We warn if they don't.
+// ═══════════════════════════════════
+function sumMap(m) { return Object.values(m).reduce((a,b)=>a+b,0); }
+function addMap(m, k, v) { m[k] = (m[k]||0) + v; }
+
+function calc() {
+  const CW = ST.cols, RH = ST.rows, D = ST.depth;
+  const B = CW.length, H = RH.length, T = 1;
+  const warns = [];
+
+  // Find bounding box of active (non-empty) cells
+  let minR=H, maxR=-1, minC=B, maxC=-1;
+  for (let r=0; r<H; r++) for (let c=0; c<B; c++) {
+    if (ST.grid[r][c].type !== '') {
+      minR=Math.min(minR,r); maxR=Math.max(maxR,r);
+      minC=Math.min(minC,c); maxC=Math.max(maxC,c);
+    }
+  }
+
+  // No active cells → show zeros
+  if (maxR < 0) {
+    ['t-w','t-p','t-pl','t-fr','t-be','t-kl'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='0';});
+    document.getElementById('bom-meta').textContent = 'Keine Felder definiert';
+    document.getElementById('warnings').innerHTML = `<div class="info-box">Alle Felder sind leer — bitte mindestens ein Feld definieren.</div>`;
+    document.getElementById('bom-out').innerHTML = '';
+    return;
+  }
+
+  // Check rectangle completeness: every cell in bounding box must be active
+  let hasGaps = false;
+  for (let r=minR; r<=maxR; r++) for (let c=minC; c<=maxC; c++) {
+    if (ST.grid[r][c].type === '') { hasGaps = true; break; }
+    if (hasGaps) break;
+  }
+  if (hasGaps) warns.push('Das Möbel hat Lücken — alle Felder im begrenzenden Rechteck müssen definiert sein.');
+
+  // Work only within bounding box
+  const activeRows = RH.slice(minR, maxR+1);
+  const activeCols = CW.slice(minC, maxC+1);
+  const Bact = activeCols.length, Hact = activeRows.length;
+
+  let nK=0, nS=0, nTR=0, nTL=0, nDT=0, totalSch=0;
+  for (let r=minR; r<=maxR; r++) for (let c=minC; c<=maxC; c++) {
+    const d=ST.grid[r][c], w=CW[c], h=RH[r];
+    if (d.type==='K') nK++;
+    else if (d.type==='S') { nS++; totalSch++; }
+    else if (d.type==='TR') nTR++;
+    else if (d.type==='TL') nTL++;
+    else if (d.type==='DT') nDT++;
+    if (d.type==='S'&&(w>980||h>360)) warns.push(`Schublade Z${r+1}/S${c+1}: ${w}×${h}mm > max 980×360mm`);
+    if ((d.type==='TR'||d.type==='TL'||d.type==='DT')&&w>980) warns.push(`${d.type} Z${r+1}/S${c+1}: ${w}mm > max 980mm`);
+    if (d.type==='K'&&h>980) warns.push(`Klappe Z${r+1}/S${c+1}: ${h}mm > max 980mm`);
+  }
+  if (B > MAX_B) warns.push(`Zu viele Spalten: ${B} (max. ${MAX_B})`);
+  if (H > MAX_H) warns.push(`Zu viele Zeilen: ${H} (max. ${MAX_H})`);
+
+  const E = Bact * Hact;
+
+  // Würfel
+  const wuerfel = (Bact+1)*(Hact+1)*(T+1) - 2*(Bact*Hact*T - E*T);
+
+  // Profile
+  const pB={}, pH={}, pT={};
+  for (let c=0; c<Bact; c++) addMap(pB, activeCols[c], (Hact+1)*(T+1));
+  for (let r=0; r<Hact; r++) addMap(pH, activeRows[r], (Bact+1)*(T+1));
+  addMap(pT, D, T*(Bact+1)*(Hact+1));
+  const pBt=sumMap(pB), pHt=sumMap(pH), pTt=sumMap(pT), pGes=pBt+pHt+pTt;
+
+  // Böden (use active cols × depth)
+  const bStd={}, bKl={};
+  for (let c=0; c<Bact; c++) addMap(bStd, activeCols[c]+'×'+D, (Hact+1)*T);
+  for (let r=minR; r<=maxR; r++) for (let c=minC; c<=maxC; c++) {
+    if (ST.grid[r][c].type==='K') {
+      const k=CW[c]+'×'+D; addMap(bStd,k,-T); addMap(bKl,k,T);
+    }
+  }
+  const bStdT=Math.max(0,sumMap(bStd)), bKlT=sumMap(bKl);
+
+  // Rücken
+  const rMap={};
+  for (let r=minR; r<=maxR; r++) for (let c=minC; c<=maxC; c++)
+    addMap(rMap, CW[c]+'×'+RH[r], T);
+  const rT=sumMap(rMap);
+
+  // Seiten außen — split by row: SY32 if any cell in that row has shelves
+  const sAMap={}, sAMapSY32={};
+  if (ST.opts.outer) {
+    for (let r=0; r<Hact; r++) {
+      const rAbs = minR+r;
+      const hasShelves = ST.cols.slice(minC,maxC+1).some((_,ci)=>(ST.grid[rAbs][minC+ci]||{}).shelves>0);
+      const key = activeRows[r]+'×'+D;
+      if (hasShelves) addMap(sAMapSY32, key, 2*T);
+      else            addMap(sAMap,     key, 2*T);
+    }
+  }
+  const sAT=sumMap(sAMap), sATsy=sumMap(sAMapSY32);
+
+  // Seiten innen — split by row: SY32 if any cell in that row has shelves
+  const sIMap={}, sIMapSY32={};
+  if (ST.opts.inner && Bact>1) {
+    for (let r=0; r<Hact; r++) {
+      const rAbs = minR+r;
+      const hasShelves = ST.cols.slice(minC,maxC+1).some((_,ci)=>(ST.grid[rAbs][minC+ci]||{}).shelves>0);
+      const key = activeRows[r]+'×'+D;
+      const count = (Bact-1)*T;
+      if (hasShelves) addMap(sIMapSY32, key, count);
+      else            addMap(sIMap,     key, count);
+    }
+  }
+  const sIT=sumMap(sIMap), sITsy=sumMap(sIMapSY32);
+
+  // Fachböden
+  const fbMap={};
+  for (let r=minR; r<=maxR; r++) for (let c=minC; c<=maxC; c++) {
+    const sh=(ST.grid[r][c].shelves||0);
+    if (sh>0) addMap(fbMap, CW[c]+'×'+D, sh*T);
+  }
+  const fbT=sumMap(fbMap);
+
+  const plattenGes=bStdT+bKlT+rT+sAT+sATsy+sIT+sITsy+fbT;
+
+  // Fronten
+  const fMap={K:{},S:{},TR:{},TL:{},DT:{}};
+  for (let r=minR; r<=maxR; r++) for (let c=minC; c<=maxC; c++) {
+    const d=ST.grid[r][c];
+    if (d.type===''||d.type==='O') continue;  // leer + offen = keine Front
+    const bl=d.type==='DT'?2:1;
+    addMap(fMap[d.type], CW[c]+'×'+RH[r], bl);
+  }
+  const frontGes=Object.values(fMap).reduce((a,m)=>a+sumMap(m),0);
+
+  // Griff — Pflicht wenn Fronten vorhanden
+  const handleObj = HANDLE_BY_V[ST.handle] || {};
+  const handleWarnEl = document.getElementById('handle-warn');
+  if (handleWarnEl) handleWarnEl.style.display = (frontGes>0 && ST.handle==='none') ? 'inline' : 'none';
+  if (frontGes>0 && ST.handle==='none') warns.push('Griff nicht ausgewählt — Pflichtfeld bei Frontmöbeln.');
+
+  // Beschläge
+  const bolzen=pGes*2, klemm=plattenGes*4;
+  const scharn=nK*2+(nTR+nTL)*4+nDT*8, kHalt=nK*2, kDaem=nK*2;
+  const schubF=totalSch, stell=2*(Bact+1);
+  const beschlGes=scharn+kHalt+kDaem+schubF+stell;
+
+  // UI update
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  set('t-w',wuerfel); set('t-p',pGes); set('t-pl',plattenGes);
+  set('t-fr',frontGes); set('t-be',beschlGes); set('t-kl',bolzen*4+klemm);
+
+  const mat=ST.surface, matObj=MAT_BY_V[mat]||{}, pg=matObj.pg||'—';
+  const totBmm=activeCols.reduce((a,b)=>a+b,0), totHmm=activeRows.reduce((a,b)=>a+b,0);
+  set('bom-meta',
+    `${Bact}×${Hact} · ${totBmm+30}×${totHmm+30}×${D+30}mm Außenmaß`+
+    (mat!=='none'?` · ${mat} (${pg})`:''));
+
+  // Warnings
+  const wEl=document.getElementById('warnings');
+  if(wEl) wEl.innerHTML=warns.map(w=>`<div class="warn-box"><span>⚠</span>${w}</div>`).join('');
+
+  // BOM render
+  const grp=(t,c)=>c?`<div class="bom-group"><div class="bg-hd">${t}</div>${c}</div>`:'';
+  const bRow=(n,s,q)=>`<div class="b-row${q===0?' zero':''}">
+    <div><div class="b-name">${n}</div>${s?`<div class="b-sub">${s}</div>`:''}</div>
+    <span class="b-qty${q===0?' z':''}">${q}</span></div>`;
+  const mapR=(m,lbl)=>Object.entries(m).filter(([,q])=>q>0).sort()
+    .map(([d,q])=>bRow(`${lbl} <span class="hl">${d}mm</span>`,'',q)).join('');
+
+  const typeLabel={K:'Klappe',S:'Schublade',TR:'Tür rechts',TL:'Tür links',DT:'Doppeltür'};
+  const matTag=mat==='none'
+    ?`<span style="color:#c04a3a;font-size:9px">⚑ keine Oberfläche</span>`
+    :`<span style="background:var(--warm);padding:1px 5px;border-radius:2px;border:1px solid var(--rule);font-size:9px">${mat} · ${pg}</span>`;
+
+  let frontenHTML='';
+  for (const [typ,m] of Object.entries(fMap)) {
+    if (!sumMap(m)) continue;
+    frontenHTML+=`<div style="padding:3px 8px;border:1px solid var(--rule);border-top:none;
+      display:flex;justify-content:space-between;align-items:center;
+      background:var(--paper);font-size:9px;color:var(--bronze-d)">
+      <span>${typeLabel[typ]}</span>${matTag}</div>`;
+    frontenHTML+=Object.entries(m).filter(([,q])=>q>0).sort()
+      .map(([d,q])=>bRow(`<span class="hl">${d}mm</span>`,'',q)).join('');
+  }
+  if (!frontGes) frontenHTML=bRow('—','Keine Frontelemente konfiguriert',0);
+
+  const bomEl=document.getElementById('bom-out');
+  if(bomEl) bomEl.innerHTML=[
+    grp('Würfel', bRow('Würfel 30mm',`(${Bact}+1)×(${Hact}+1)×2 − 2×(${Bact*Hact}−${E})`,wuerfel)),
+    grp('Profile — Breite',
+      Object.entries(pB).sort((a,b)=>+a[0]-+b[0]).map(([l,q])=>bRow(`L=${l}mm`,`(H+1)×(T+1) je Sp.`,q)).join('')+bRow('Summe','',pBt)),
+    grp('Profile — Höhe',
+      Object.entries(pH).sort((a,b)=>+a[0]-+b[0]).map(([l,q])=>bRow(`L=${l}mm`,`(B+1)×(T+1) je Z.`,q)).join('')+bRow('Summe','',pHt)),
+    grp('Profile — Tiefe', bRow(`L=${D}mm`,`T×(B+1)×(H+1)`,pTt)),
+    grp('Böden Standard', mapR(bStd,'Boden')+bRow('Summe','(H+1)×B×T − Klappen',bStdT)),
+    grp('Klappenböden', bKlT>0?mapR(bKl,'Klappenboden'):bRow('—','keine Klappen',0)),
+    grp('Rücken', mapR(rMap,'Rücken')),
+    ST.opts.outer?grp('Seiten außen', mapR(sAMap,'Seite') + (sATsy>0?mapR(sAMapSY32,'Seite <span style="color:var(--bronze-d)">SY32</span>'):'')):'' ,
+    ST.opts.inner?grp('Seiten innen', mapR(sIMap,'Seite') + (sITsy>0?mapR(sIMapSY32,'Seite <span style="color:var(--bronze-d)">SY32</span>'):'')):'' ,
+    fbT>0 ? grp('Fachböden', mapR(fbMap,'Fachboden')) : '',
+    grp('Fronten', frontenHTML),
+    frontGes>0 ? grp('Griffe', (() => {
+      if (ST.handle==='none') return bRow('<span style="color:#c04a3a">⚑ kein Griff gewählt</span>','',0,'');
+      const lb = handleObj.lb ? handleObj.lb+'mm Lochbohrung' : 'kein Loch';
+      return bRow(handleObj.l||ST.handle, lb, frontGes, '');
+    })()) : '',
+    grp('Verbindungskleinteile',[
+      bRow('Sicherungsbolzen',`${pGes}×2`,bolzen),
+      bRow('Gewindebolzen',   `${pGes}×2`,bolzen),
+      bRow('Madenschraube',   `${pGes}×2`,bolzen),
+      bRow('Verdrehsicherung',`${pGes}×2`,bolzen),
+      bRow('Klemmsterne',     `${plattenGes}×4`,klemm),
+    ].join('')),
+    grp('Beschläge',[
+      bRow('Scharniere',         `K:${nK}×2 + TR/TL:${nTR+nTL}×4 + DT:${nDT}×8`,scharn),
+      bRow('Klappenhalter',      `${nK}×2`,kHalt),
+      bRow('Klappendämpfer',     `${nK}×2`,kDaem),
+      bRow('Schubkastenführung', `${totalSch} Schubladen`,schubF),
+      bRow('Stellfüße',          `2×(${Bact}+1)`,stell),
+    ].join('')),
+  ].join('');
+}
+
+// ═══════════════════════════════════
+// XLS EXPORT
+// ═══════════════════════════════════
+function exportXLS() {
+  try {
+    const bomData = getBOMData();
+    if (!bomData) { alert('Keine Stückliste — bitte zuerst Felder definieren.'); return; }
+
+    const ts     = new Date().toLocaleDateString('de-DE');
+    const mat    = ST.surface, matObj = MAT_BY_V[mat]||{}, pg = matObj.pg||'—';
+    const tLabel = {K:'Klappe',S:'Schublade',TR:'Tür rechts',TL:'Tür links',DT:'Doppeltür'};
+
+    // Flat list: [Gruppe, Bauteil, Abmessung, Anzahl, Hinweis]
+    const rows = [
+      ['Gruppe', 'Bauteil', 'Abmessung', 'Anzahl', 'Hinweis']
+    ];
+
+    const r = (g,b,a,q,h) => rows.push([g, b, a, String(q), h||'']);
+
+    // Würfel
+    r('Würfel', 'Würfel 30mm', '30×30×30mm', bomData.wuerfel);
+
+    // Profile
+    Object.entries(bomData.pB).sort((a,b)=>+a[0]-+b[0]).forEach(([l,q])=>
+      r('Profile', 'Profil Breite', l+' mm', q));
+    Object.entries(bomData.pH).sort((a,b)=>+a[0]-+b[0]).forEach(([l,q])=>
+      r('Profile', 'Profil Höhe', l+' mm', q));
+    r('Profile', 'Profil Tiefe', bomData.D+' mm', bomData.pTt);
+
+    // Platten
+    Object.entries(bomData.bStd).filter(([,q])=>q>0).sort().forEach(([d,q])=>
+      r('Platten', 'Boden Standard', d+' mm', q));
+    if (bomData.bKlT>0)
+      Object.entries(bomData.bKl).filter(([,q])=>q>0).sort().forEach(([d,q])=>
+        r('Platten', 'Klappenboden', d+' mm', q, 'mit Scharnierfräsung'));
+    Object.entries(bomData.rMap).filter(([,q])=>q>0).sort().forEach(([d,q])=>
+      r('Platten', 'Rücken', d+' mm', q));
+    if (bomData.sAT>0)
+      Object.entries(bomData.sAMap).filter(([,q])=>q>0).sort().forEach(([d,q])=>
+        r('Platten', 'Seite außen', d+' mm', q));
+    if (bomData.sATsy>0)
+      Object.entries(bomData.sAMapSY32).filter(([,q])=>q>0).sort().forEach(([d,q])=>
+        r('Platten', 'Seite außen SY32', d+' mm', q, 'System32-Bohrung'));
+    if (bomData.sIT>0)
+      Object.entries(bomData.sIMap).filter(([,q])=>q>0).sort().forEach(([d,q])=>
+        r('Platten', 'Seite innen', d+' mm', q));
+    if (bomData.sITsy>0)
+      Object.entries(bomData.sIMapSY32).filter(([,q])=>q>0).sort().forEach(([d,q])=>
+        r('Platten', 'Seite innen SY32', d+' mm', q, 'System32-Bohrung'));
+    if (bomData.fbT>0)
+      Object.entries(bomData.fbMap).filter(([,q])=>q>0).sort().forEach(([d,q])=>
+        r('Platten', 'Fachboden', d+' mm', q));
+
+    // Fronten
+    for (const [typ,m] of Object.entries(bomData.fMap))
+      Object.entries(m).filter(([,q])=>q>0).sort().forEach(([d,q])=>
+        r('Fronten', tLabel[typ]||typ, d+' mm', q, mat==='none'?'':mat+(pg!=='—'?' ('+pg+')':'')));
+
+    // Griffe
+    if (bomData.frontGes>0) {
+      const hObj = bomData.handleObj;
+      const hName = hObj.l || (bomData.handle==='none'?'— kein Griff gewählt':bomData.handle);
+      const hLB   = hObj.lb ? hObj.lb+'mm Lochbohrung' : 'kein Loch';
+      r('Griffe', hName, '—', bomData.frontGes, hLB);
+    }
+
+    // Beschläge & Kleinteile
+    r('Kleinteile', 'Sicherungsbolzen',  '—', bomData.bolzen);
+    r('Kleinteile', 'Gewindebolzen',     '—', bomData.bolzen);
+    r('Kleinteile', 'Madenschraube',     '—', bomData.bolzen);
+    r('Kleinteile', 'Verdrehsicherung',  '—', bomData.bolzen);
+    r('Kleinteile', 'Klemmsterne',       '—', bomData.klemm);
+    if (bomData.scharn>0)  r('Beschläge', 'Scharniere',         '—', bomData.scharn);
+    if (bomData.kHalt>0)   r('Beschläge', 'Klappenhalter',      '—', bomData.kHalt);
+    if (bomData.kDaem>0)   r('Beschläge', 'Klappendämpfer',     '—', bomData.kDaem);
+    if (bomData.schubF>0)  r('Beschläge', 'Schubkastenführung', '—', bomData.schubF);
+    r('Beschläge', 'Stellfüße', '—', bomData.stell);
+
+    downloadXLSX(rows, 'Artmodul_Stueckliste_'+ts.replace(/\./g,'-')+'.xlsx');
+  } catch(e) {
+    alert('Fehler beim Export: ' + e.message);
+    console.error(e);
+  }
+}
+
+function downloadXLSX(rows, filename) {
+  // Colors for row types
+  const fills = {
+    grp:   'FF1565A8',  // blue
+    hdr:   'FFE8E4DC',  // light warm gray
+    sum:   'FFF2F0EC',  // very light gray
+    title: 'FFFFFFFF',
+    meta:  'FFFFFFFF',
+    data:  'FFFFFFFF',
+    blank: 'FFFFFFFF',
+  };
+  const fonts = {
+    grp:   {bold:true,  color:'FFFFFFFF', sz:11},
+    hdr:   {bold:true,  color:'FF333333', sz:10},
+    sum:   {bold:true,  color:'FF1C1A17', sz:10},
+    title: {bold:true,  color:'FF1C1A17', sz:14},
+    meta:  {bold:false, color:'FF7A7670', sz:10},
+    data:  {bold:false, color:'FF3A3834', sz:10},
+    blank: {bold:false, color:'FF3A3834', sz:10},
+  };
+
+  function xmlEsc(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+  }
+
+  // Shared strings
+  const strs = []; const strIdx = {};
+  function si(v) {
+    const s = String(v);
+    if (strIdx[s] === undefined) { strIdx[s] = strs.length; strs.push(s); }
+    return strIdx[s];
+  }
+
+  // Build styles
+  const numFmtXml = '<numFmts count="1"><numFmt numFmtId="164" formatCode="General"/></numFmts>';
+
+  const fontDefs = Object.values(fonts).map(f =>
+    `<font><sz val="${f.sz}"/><color rgb="${f.color}"/><name val="Arial"/>${f.bold?'<b/>':''}</font>`
+  ).join('');
+  const fontKeys = Object.keys(fonts);
+
+  const fillDefs = '<fills count="'+(Object.keys(fills).length+2)+'"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>' +
+    Object.values(fills).map(c =>
+      `<fill><patternFill patternType="solid"><fgColor rgb="${c}"/></patternFill></fill>`
+    ).join('') + '</fills>';
+  const fillKeys = Object.keys(fills);
+
+  // One xf per row type
+  const xfDefs = Object.keys(fonts).map((k,i) => {
+    const fi = fillKeys.indexOf(k) + 2; // +2 for the 2 default fills
+    return `<xf numFmtId="0" fontId="${i}" fillId="${fi}" borderId="0" xfId="0"${k==='grp'||k==='hdr'||k==='sum'?'applyFill="1"':''} applyFont="1"/>`;
+  }).join('');
+
+  const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+${numFmtXml}
+<fonts count="${fontKeys.length}">${fontDefs}</fonts>
+${fillDefs}
+<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="${fontKeys.length}">${xfDefs}</cellXfs>
+</styleSheet>`;
+
+  // Build sheet data
+  let sheetRows = '';
+  const colWidths = [18, 26, 22, 10, 24]; // chars
+
+  rows.forEach((row, ri) => {
+    const rtype = ri === 0 ? 'hdr' : 'data';
+    const xfIdx = fontKeys.indexOf(rtype);
+    const rowH  = ri === 0 ? 18 : 15;
+    sheetRows += `<row r="${ri+1}" ht="${rowH}" customHeight="1">`;
+    ['A','B','C','D','E'].forEach((col,ci) => {
+      const val = row[ci] || '';
+      const addr = col+(ri+1);
+      if (ci===3 && ri>0 && !isNaN(val) && val!=='') {
+        // numeric cell
+        sheetRows += `<c r="${addr}" s="${xfIdx}" t="n"><v>${val}</v></c>`;
+      } else if (val==='') {
+        sheetRows += `<c r="${addr}" s="${xfIdx}"/>`;
+      } else {
+        const idx = si(val);
+        sheetRows += `<c r="${addr}" s="${xfIdx}" t="s"><v>${idx}</v></c>`;
+      }
+    });
+    sheetRows += '</row>';
+  });
+
+  const colDefs = colWidths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('');
+
+  const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<cols>${colDefs}</cols>
+<sheetData>${sheetRows}</sheetData>
+</worksheet>`;
+
+  const sstXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${strs.length}" uniqueCount="${strs.length}">
+${strs.map(s=>`<si><t xml:space="preserve">${xmlEsc(s)}</t></si>`).join('')}
+</sst>`;
+
+  const wbXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<sheets><sheet name="Stückliste" sheetId="1" r:id="rId1"/></sheets>
+</workbook>`;
+
+  const wbRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>
+<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`;
+
+  const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
+<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+</Types>`;
+
+  const rootRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`;
+
+  // ── ZIP it ──
+  const files = {
+    '[Content_Types].xml': contentTypes,
+    '_rels/.rels': rootRels,
+    'xl/workbook.xml': wbXml,
+    'xl/_rels/workbook.xml.rels': wbRels,
+    'xl/worksheets/sheet1.xml': sheetXml,
+    'xl/sharedStrings.xml': sstXml,
+    'xl/styles.xml': stylesXml,
+  };
+
+  const zip = buildZip(files);
+  const blob = new Blob([zip], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+
+// ── Minimal ZIP builder (DEFLATE-less, stored only) ──
+function buildZip(files) {
+  const enc = new TextEncoder();
+  const parts = [];
+  const centralDir = [];
+  let offset = 0;
+
+  function u16(n) { return [n&0xff, (n>>8)&0xff]; }
+  function u32(n) { return [n&0xff,(n>>8)&0xff,(n>>16)&0xff,(n>>24)&0xff]; }
+
+  function crc32(data) {
+    let crc = 0xFFFFFFFF;
+    const table = crc32.t || (crc32.t = (()=>{
+      const t=new Uint32Array(256);
+      for(let i=0;i<256;i++){let c=i;for(let j=0;j<8;j++)c=c&1?(0xEDB88320^(c>>>1)):(c>>>1);t[i]=c;}
+      return t;
+    })());
+    for(let i=0;i<data.length;i++) crc=table[(crc^data[i])&0xff]^(crc>>>8);
+    return (crc^0xFFFFFFFF)>>>0;
+  }
+
+  for (const [name, content] of Object.entries(files)) {
+    const data = enc.encode(content);
+    const nameBytes = enc.encode(name);
+    const crc = crc32(data);
+    const size = data.length;
+
+    const local = new Uint8Array([
+      0x50,0x4B,0x03,0x04, // sig
+      20,0,                // version
+      0,0,                 // flags
+      0,0,                 // compression (stored)
+      0,0,0,0,             // mod time/date
+      ...u32(crc),
+      ...u32(size),
+      ...u32(size),
+      ...u16(nameBytes.length),
+      0,0,                 // extra length
+      ...nameBytes,
+      ...data
+    ]);
+    parts.push(local);
+
+    const central = new Uint8Array([
+      0x50,0x4B,0x01,0x02, // sig
+      20,0,                // version made by
+      20,0,                // version needed
+      0,0,                 // flags
+      0,0,                 // compression
+      0,0,0,0,             // mod time/date
+      ...u32(crc),
+      ...u32(size),
+      ...u32(size),
+      ...u16(nameBytes.length),
+      0,0,                 // extra
+      0,0,                 // comment
+      0,0,                 // disk start
+      0,0,                 // internal attr
+      0,0,0,0,             // external attr
+      ...u32(offset),
+      ...nameBytes,
+    ]);
+    centralDir.push(central);
+    offset += local.length;
+  }
+
+  const centralSize = centralDir.reduce((a,b)=>a+b.length,0);
+  const eocd = new Uint8Array([
+    0x50,0x4B,0x05,0x06, // sig
+    0,0,                 // disk
+    0,0,                 // disk with cd
+    ...u16(centralDir.length),
+    ...u16(centralDir.length),
+    ...u32(centralSize),
+    ...u32(offset),
+    0,0                  // comment
+  ]);
+
+  const totalLen = parts.reduce((a,b)=>a+b.length,0) + centralSize + eocd.length;
+  const result = new Uint8Array(totalLen);
+  let pos = 0;
+  for (const p of [...parts, ...centralDir, eocd]) { result.set(p, pos); pos += p.length; }
+  return result;
+}
+
+function getBOMData() {
+  const CW = ST.cols, RH = ST.rows, D = ST.depth;
+  const B = CW.length, H = RH.length, T = 1;
+
+  let minR=H, maxR=-1, minC=B, maxC=-1;
+  for (let r=0; r<H; r++) for (let c=0; c<B; c++) {
+    if (ST.grid[r][c].type !== '') {
+      minR=Math.min(minR,r); maxR=Math.max(maxR,r);
+      minC=Math.min(minC,c); maxC=Math.max(maxC,c);
+    }
+  }
+  if (maxR < 0) return null;
+
+  const activeRows = RH.slice(minR, maxR+1);
+  const activeCols = CW.slice(minC, maxC+1);
+  const Bact = activeCols.length, Hact = activeRows.length;
+
+  let nK=0, nS=0, nTR=0, nTL=0, nDT=0, totalSch=0;
+  for (let r=minR; r<=maxR; r++) for (let c=minC; c<=maxC; c++) {
+    const d=ST.grid[r][c];
+    if (d.type==='K') nK++;
+    else if (d.type==='S') { nS++; totalSch++; }
+    else if (d.type==='TR') nTR++;
+    else if (d.type==='TL') nTL++;
+    else if (d.type==='DT') nDT++;
+  }
+
+  const E = Bact * Hact;
+  const wuerfel = (Bact+1)*(Hact+1)*(T+1) - 2*(Bact*Hact*T - E*T);
+
+  const pB={}, pH={}, pT={};
+  const addMap2=(m,k,v)=>{ m[k]=(m[k]||0)+v; };
+  for (let c=0; c<Bact; c++) addMap2(pB, activeCols[c], (Hact+1)*(T+1));
+  for (let r=0; r<Hact; r++) addMap2(pH, activeRows[r], (Bact+1)*(T+1));
+  addMap2(pT, D, T*(Bact+1)*(Hact+1));
+  const pBt=Object.values(pB).reduce((a,b)=>a+b,0);
+  const pHt=Object.values(pH).reduce((a,b)=>a+b,0);
+  const pTt=Object.values(pT).reduce((a,b)=>a+b,0);
+  const pGes=pBt+pHt+pTt;
+
+  const bStd={}, bKl={};
+  for (let c=0; c<Bact; c++) addMap2(bStd, activeCols[c]+'×'+D, (Hact+1)*T);
+  for (let r=minR; r<=maxR; r++) for (let c=minC; c<=maxC; c++) {
+    if (ST.grid[r][c].type==='K') {
+      const k=CW[c]+'×'+D; addMap2(bStd,k,-T); addMap2(bKl,k,T);
+    }
+  }
+  const bStdT=Math.max(0,Object.values(bStd).reduce((a,b)=>a+b,0));
+  const bKlT=Object.values(bKl).reduce((a,b)=>a+b,0);
+
+  const rMap={};
+  for (let r=minR; r<=maxR; r++) for (let c=minC; c<=maxC; c++)
+    addMap2(rMap, CW[c]+'×'+RH[r], T);
+  const rT=Object.values(rMap).reduce((a,b)=>a+b,0);
+
+  const sAMap={}, sAMapSY32={};
+  if (ST.opts.outer) {
+    for (let r=0; r<Hact; r++) {
+      const rAbs=minR+r;
+      const hasShelves=ST.cols.slice(minC,maxC+1).some((_,ci)=>(ST.grid[rAbs][minC+ci]||{}).shelves>0);
+      const key=activeRows[r]+'×'+D;
+      if (hasShelves) addMap2(sAMapSY32,key,2*T); else addMap2(sAMap,key,2*T);
+    }
+  }
+  const sAT=Object.values(sAMap).reduce((a,b)=>a+b,0);
+  const sATsy=Object.values(sAMapSY32).reduce((a,b)=>a+b,0);
+
+  const sIMap={}, sIMapSY32={};
+  if (ST.opts.inner && Bact>1) {
+    for (let r=0; r<Hact; r++) {
+      const rAbs=minR+r;
+      const hasShelves=ST.cols.slice(minC,maxC+1).some((_,ci)=>(ST.grid[rAbs][minC+ci]||{}).shelves>0);
+      const key=activeRows[r]+'×'+D;
+      const count=(Bact-1)*T;
+      if (hasShelves) addMap2(sIMapSY32,key,count); else addMap2(sIMap,key,count);
+    }
+  }
+  const sIT=Object.values(sIMap).reduce((a,b)=>a+b,0);
+  const sITsy=Object.values(sIMapSY32).reduce((a,b)=>a+b,0);
+
+  const fbMap={};
+  for (let r=minR; r<=maxR; r++) for (let c=minC; c<=maxC; c++) {
+    const sh=(ST.grid[r][c].shelves||0);
+    if (sh>0) addMap2(fbMap, CW[c]+'×'+D, sh*T);
+  }
+  const fbT=Object.values(fbMap).reduce((a,b)=>a+b,0);
+
+  const plattenGes=bStdT+bKlT+rT+sAT+sATsy+sIT+sITsy+fbT;
+
+  const fMap={K:{},S:{},TR:{},TL:{},DT:{}};
+  for (let r=minR; r<=maxR; r++) for (let c=minC; c<=maxC; c++) {
+    const d=ST.grid[r][c];
+    if (d.type===''||d.type==='O') continue;
+    const bl=d.type==='DT'?2:1;
+    addMap2(fMap[d.type], CW[c]+'×'+RH[r], bl);
+  }
+  const frontGes=Object.values(fMap).reduce((a,m)=>a+Object.values(m).reduce((x,y)=>x+y,0),0);
+
+  const bolzen=pGes*2, klemm=plattenGes*4;
+  const scharn=nK*2+(nTR+nTL)*4+nDT*8, kHalt=nK*2, kDaem=nK*2;
+  const schubF=totalSch, stell=2*(Bact+1);
+  const beschlGes=scharn+kHalt+kDaem+schubF+stell;
+
+  return { wuerfel, pB, pH, pT, pBt, pHt, pTt, pGes, D,
+    bStd, bKl, bStdT, bKlT, rMap, rT,
+    sAMap, sAT, sAMapSY32, sATsy,
+    sIMap, sIT, sIMapSY32, sITsy,
+    fbMap, fbT, plattenGes,
+    fMap, frontGes, bolzen, klemm, scharn, kHalt, kDaem, schubF, stell, beschlGes,
+    handle: ST.handle, handleObj: HANDLE_BY_V[ST.handle]||{},
+    nK, nS, nTR, nTL, nDT, totalSch, Bact, Hact };
+}
+
+ensureGrid();
+initSwatches();
+// Wait one frame so cfg-scroll has correct dimensions before first render
+requestAnimationFrame(() => {
+  render();
+  // Re-render on resize
+  const ro = new ResizeObserver(() => render());
+  const el = document.getElementById('cfg-scroll');
+  if (el) ro.observe(el);
+});
+</script>
+
+</body>
+</html>
