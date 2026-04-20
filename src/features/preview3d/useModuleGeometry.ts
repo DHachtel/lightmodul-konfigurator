@@ -107,7 +107,7 @@ export function computeModuleGeometry(state: ConfigState): SceneObject[] {
           partType: 'wuerfel',
           position: [wx * s, wy * s, wz * s],
           size:     [C * s, C * s, C * s],
-          color:    WUERFEL_COLOR,
+          color:    matColor,
           roughness: 0.3,
           metalness: 0.7,
         });

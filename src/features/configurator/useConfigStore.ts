@@ -57,6 +57,7 @@ export interface ConfigActions {
   addFilledColLeft(): void;
   addFilledColRight(): void;
   addFilledRowTop(): void;
+  addFilledRowBottom(): void;
   // Fehler-State
   gravityError: string | null;
   clearGravityError(): void;
@@ -248,6 +249,21 @@ export function useConfigStore(): [ConfigState, ConfigActions, () => void] {
         }));
       });
       return { ...s, rows: [PAD_ROW_H, ...s.rows], grid: [newRow, ...s.grid] };
+    }),
+
+    addFilledRowBottom: () => update(s => {
+      if (s.rows.length >= MAX_ROWS) return s;
+      const nD = s.depthLayers;
+      const newRow: Cell[][] = Array.from({ length: s.cols.length }, (_, c) => {
+        // Unterste Zeile aktiv? Dann neue Zelle auch aktiv
+        const lastRow = s.grid[s.grid.length - 1];
+        const hasActive = lastRow?.[c]?.some(cell => cell.type !== '') ?? false;
+        return Array.from({ length: nD }, () => ({
+          type: hasActive ? 'O' as CellType : '' as CellType,
+          shelves: 0,
+        }));
+      });
+      return { ...s, rows: [...s.rows, PAD_ROW_H], grid: [...s.grid, newRow] };
     }),
 
     // ── Fehler-State ──────────────────────────────────────────────────────

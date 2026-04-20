@@ -25,9 +25,8 @@ import { ELEMENT_SIZE_MM, MAT_BY_V, MATERIALS, MAX_COLS, MAX_ROWS } from '@/core
 import { useModuleGeometry, type SceneObject } from './useModuleGeometry';
 import SmartMesh from './SmartMesh';
 import GhostZone from './GhostZone';
-import type { GhostSide } from './GhostZone';
 import RemoveButton from './RemoveButton';
-import AddCellButton from './AddCellButton';
+
 import ColumnRowLabels from './ColumnRowLabels';
 import { getWoodTexture, getMDFTexture } from './useWoodTexture';
 import DimensionOverlay from './DimensionOverlay';
@@ -593,8 +592,10 @@ interface Preview3DProps {
   drillLevel?: 'moebel' | 'element' | 'platte';
   selectedCell?: { row: number; col: number } | null;
   selectedPlateId?: string | null;
-  /** Ghost Zone: Spalte/Zeile hinzufügen */
-  onGhostConfirm?: (side: GhostSide) => void;
+  /** Ghost Zone: Zelle hinzufuegen (row, col) — fuer interne leere Zellen */
+  onGhostClick?: (row: number, col: number) => void;
+  /** Grid erweitern und Zelle hinzufuegen (Rand-Ghost-Zones) */
+  onExpandAndAdd?: (direction: 'left' | 'right' | 'top' | 'bottom', atIndex: number) => void;
   /** Element entfernen (row, col) */
   onRemoveElement?: (row: number, col: number) => void;
   /** Leere Zelle mit 'O' füllen (row, col) */
@@ -621,7 +622,8 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
   drillLevel = 'moebel',
   selectedCell,
   selectedPlateId,
-  onGhostConfirm,
+  onGhostClick,
+  onExpandAndAdd,
   onRemoveElement,
   onAddCell,
   onSetCol,
@@ -675,109 +677,166 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
 
   const objects = useModuleGeometry(state);
 
-  // ── Ghost Zones: Positionen berechnen ──
-  const activeRange = useMemo(() => {
-    const numRows = state.rows.length, numCols = state.cols.length;
-    let minR = numRows, maxR = -1, minC = numCols, maxC = -1;
-    for (let r = 0; r < numRows; r++)
-      for (let c = 0; c < numCols; c++)
-        if (state.grid[r]?.[c]?.some(cell => cell.type !== '')) {
-          if (r < minR) minR = r; if (r > maxR) maxR = r;
-          if (c < minC) minC = c; if (c > maxC) maxC = c;
-        }
-    if (maxR < 0) { minR = 0; maxR = 0; minC = 0; maxC = 0; }
-    return { minR, maxR, minC, maxC };
-  }, [state.grid, state.rows.length, state.cols.length]);
-
+  // ── Ghost Zones: zellbasierte Berechnung ──
+  // Ghost Zones erscheinen an leeren Zellen mit aktivem Nachbarn (4-connected)
+  // und an den Raendern des Grids fuer Erweiterung.
   const ghostZones = useMemo(() => {
-    const zones: { side: GhostSide; position: [number, number, number]; size: [number, number, number] }[] = [];
-    const { minR, maxR, minC, maxC } = activeRange;
-    const depth = state.depthLayers * ELEMENT_SIZE_MM * S;
-    const depthCenter = depth / 2;
+    const zones: { row: number; col: number; position: [number, number, number]; size: [number, number, number] }[] = [];
+    const nR = state.rows.length;
+    const nC = state.cols.length;
+    const nD = state.depthLayers;
+    const cellSize = ELEMENT_SIZE_MM * S; // 600mm in Three.js-Einheiten
 
-    const activeYBottom = state.rows.slice(maxR + 1).reduce((a, b) => a + b, 0) * S;
-    const activeH = state.rows.slice(minR, maxR + 1).reduce((a, b) => a + b, 0) * S;
-    const activeYCenter = activeYBottom + activeH / 2;
+    // Koordinatensystem identisch zu useModuleGeometry
+    const totalW = nC * ELEMENT_SIZE_MM;
+    const totalD = nD * ELEMENT_SIZE_MM;
+    const xBase = -totalW / 2;
+    const yBase = 0;
+    const zBase = -totalD / 2;
 
-    const activeXLeft = state.cols.slice(0, minC).reduce((a, b) => a + b, 0) * S;
-    const activeW = state.cols.slice(minC, maxC + 1).reduce((a, b) => a + b, 0) * S;
-    const activeXCenter = activeXLeft + activeW / 2;
+    // Tiefe der Ghost-Zone: gesamte Moebel-Tiefe
+    const depthSize = totalD * S;
+    const zCenter = (zBase + totalD / 2) * S;
 
-    const ghostColW = 580 * S;
-    const ghostRowH = 360 * S;
+    // Hilfsfunktionen
+    const isActive = (r: number, c: number) =>
+      r >= 0 && r < nR && c >= 0 && c < nC &&
+      (state.grid[r]?.[c]?.some(cell => cell.type !== '') ?? false);
 
-    if (state.cols.length < MAX_COLS) {
-      zones.push({
-        side: 'left',
-        position: [activeXLeft - ghostColW / 2 - 0.01, activeYCenter, depthCenter],
-        size: [ghostColW, activeH, depth],
-      });
-      zones.push({
-        side: 'right',
-        position: [activeXLeft + activeW + ghostColW / 2 + 0.01, activeYCenter, depthCenter],
-        size: [ghostColW, activeH, depth],
-      });
+    const hasActiveNeighbor4 = (r: number, c: number) =>
+      isActive(r - 1, c) || isActive(r + 1, c) || isActive(r, c - 1) || isActive(r, c + 1);
+
+    // Zellposition berechnen (identisch zu useModuleGeometry)
+    const cellPos = (r: number, c: number): [number, number, number] => [
+      (xBase + (c + 0.5) * ELEMENT_SIZE_MM) * S,
+      (yBase + (nR - r - 0.5) * ELEMENT_SIZE_MM) * S,
+      zCenter,
+    ];
+
+    // 1. Leere Zellen INNERHALB des Grids mit aktivem Nachbarn
+    for (let r = 0; r < nR; r++) {
+      for (let c = 0; c < nC; c++) {
+        if (isActive(r, c)) continue;
+        if (!hasActiveNeighbor4(r, c)) continue;
+        zones.push({
+          row: r, col: c,
+          position: cellPos(r, c),
+          size: [cellSize, cellSize, depthSize],
+        });
+      }
     }
 
-    if (state.rows.length < MAX_ROWS) {
-      zones.push({
-        side: 'top',
-        position: [activeXCenter, activeYBottom + activeH + ghostRowH / 2 + 0.01, depthCenter],
-        size: [activeW, ghostRowH, depth],
-      });
+    // 2. Rand-Ghost-Zones (Grid-Erweiterung)
+    // Links (col = -1)
+    if (nC < MAX_COLS) {
+      for (let r = 0; r < nR; r++) {
+        if (!isActive(r, 0)) continue;
+        zones.push({
+          row: r, col: -1,
+          position: [
+            (xBase - ELEMENT_SIZE_MM / 2) * S,
+            (yBase + (nR - r - 0.5) * ELEMENT_SIZE_MM) * S,
+            zCenter,
+          ],
+          size: [cellSize, cellSize, depthSize],
+        });
+      }
+      // Rechts (col = nC)
+      for (let r = 0; r < nR; r++) {
+        if (!isActive(r, nC - 1)) continue;
+        zones.push({
+          row: r, col: nC,
+          position: [
+            (xBase + totalW + ELEMENT_SIZE_MM / 2) * S,
+            (yBase + (nR - r - 0.5) * ELEMENT_SIZE_MM) * S,
+            zCenter,
+          ],
+          size: [cellSize, cellSize, depthSize],
+        });
+      }
+    }
+    // Oben (row = -1)
+    if (nR < MAX_ROWS) {
+      for (let c = 0; c < nC; c++) {
+        if (!isActive(0, c)) continue;
+        zones.push({
+          row: -1, col: c,
+          position: [
+            (xBase + (c + 0.5) * ELEMENT_SIZE_MM) * S,
+            (yBase + (nR + 0.5) * ELEMENT_SIZE_MM) * S,
+            zCenter,
+          ],
+          size: [cellSize, cellSize, depthSize],
+        });
+      }
+    }
+    // Unten (row = nR)
+    if (nR < MAX_ROWS) {
+      for (let c = 0; c < nC; c++) {
+        if (!isActive(nR - 1, c)) continue;
+        zones.push({
+          row: nR, col: c,
+          position: [
+            (xBase + (c + 0.5) * ELEMENT_SIZE_MM) * S,
+            (yBase + (-0.5) * ELEMENT_SIZE_MM) * S,
+            zCenter,
+          ],
+          size: [cellSize, cellSize, depthSize],
+        });
+      }
     }
 
     return zones;
-  }, [activeRange, state.cols, state.rows, state.depthLayers * ELEMENT_SIZE_MM]);
+  }, [state.grid, state.cols, state.rows, state.depthLayers]);
 
-  // Ghost Zone Klick → sofort hinzufügen (kein Popover, Breite = Nachbar)
-  const handleGhostClick = useCallback((side: GhostSide) => {
-    if (onGhostConfirm) onGhostConfirm(side);
-  }, [onGhostConfirm]);
+  // Ghost Zone Klick — interne leere Zellen vs. Rand-Erweiterung
+  const handleGhostClick = useCallback((row: number, col: number) => {
+    const nR = state.rows.length;
+    const nC = state.cols.length;
 
-  // ── Remove + Add Buttons: Positionen pro Zelle in der aktiven Region ──
-  // Schwerkraft-Regel: Elemente dürfen nicht schweben.
-  // × nur zeigen wenn KEIN Element direkt darüber (r-1) steht.
-  // + nur zeigen wenn ein Element direkt darunter (r+1) steht ODER es die unterste Zeile im Grid ist.
+    // Interne leere Zelle: direkt mit 'O' fuellen
+    if (row >= 0 && row < nR && col >= 0 && col < nC) {
+      if (onAddCell) onAddCell(row, col);
+      return;
+    }
+
+    // Rand-Erweiterung
+    if (!onExpandAndAdd) return;
+    if (col === -1) onExpandAndAdd('left', row);
+    else if (col === nC) onExpandAndAdd('right', row);
+    else if (row === -1) onExpandAndAdd('top', col);
+    else if (row === nR) onExpandAndAdd('bottom', col);
+  }, [state.rows.length, state.cols.length, onAddCell, onExpandAndAdd]);
+
+  // ── Remove Buttons: auf allen aktiven Zellen (keine Schwerkraft-Einschraenkung) ──
   const cellButtons = useMemo(() => {
     const removes: { row: number; col: number; position: [number, number, number] }[] = [];
-    const adds: { row: number; col: number; position: [number, number, number] }[] = [];
-    const { minR, maxR, minC, maxC } = activeRange;
-    const lastRow = state.grid.length - 1;
+    const nR = state.rows.length;
+    const nC = state.cols.length;
+    const nD = state.depthLayers;
+    const totalW = nC * ELEMENT_SIZE_MM;
+    const totalD = nD * ELEMENT_SIZE_MM;
+    const xBase = -totalW / 2;
+    const yBase = 0;
 
-    for (let r = minR; r <= maxR; r++) {
-      for (let c = minC; c <= maxC; c++) {
-        const xLeft = state.cols.slice(0, c).reduce((a, b) => a + b, 0);
-        const yBottom = state.rows.slice(r + 1).reduce((a, b) => a + b, 0);
-        const w = state.cols[c];
-        const h = state.rows[r];
-
+    for (let r = 0; r < nR; r++) {
+      for (let c = 0; c < nC; c++) {
         const isOccupied = state.grid[r]?.[c]?.some(cell => cell.type !== '') ?? false;
-        const hasElementAbove = r > 0 && (state.grid[r - 1]?.[c]?.some(cell => cell.type !== '') ?? false);
-        const hasElementBelow = r < lastRow && (state.grid[r + 1]?.[c]?.some(cell => cell.type !== '') ?? false);
-        const isBottomRow = r === lastRow;
+        if (!isOccupied) continue;
 
-        if (isOccupied) {
-          // × nur zeigen wenn kein Element darüber steht (sonst würde es schweben)
-          if (!hasElementAbove) {
-            removes.push({
-              row: r, col: c,
-              position: [(xLeft + w) * S, (yBottom + h) * S, (state.depthLayers * ELEMENT_SIZE_MM + 20) * S],
-            });
-          }
-        } else {
-          // + nur zeigen wenn Element darunter steht oder unterste Grid-Zeile
-          if (hasElementBelow || isBottomRow) {
-            adds.push({
-              row: r, col: c,
-              position: [(xLeft + w / 2) * S, (yBottom + h / 2) * S, (state.depthLayers * ELEMENT_SIZE_MM + 20) * S],
-            });
-          }
-        }
+        // x Button oben-rechts an der Zelle, leicht vor dem Moebel (Z)
+        removes.push({
+          row: r, col: c,
+          position: [
+            (xBase + (c + 1) * ELEMENT_SIZE_MM) * S,
+            (yBase + (nR - r) * ELEMENT_SIZE_MM) * S,
+            (totalD + 20) * S,
+          ],
+        });
       }
     }
-    return { removes, adds };
-  }, [activeRange, state.grid, state.cols, state.rows, state.depthLayers]);
+    return { removes };
+  }, [state.grid, state.cols, state.rows, state.depthLayers]);
 
   // Szene-Objekte in Gruppen aufteilen: Platten, Profile, Griffe, GLB-Strukturteile
   const PLATTE_TYPES = new Set(['seite_l','seite_r','boden','deckel','ruecken','zwischenboden','zwischenwand','fachboden','front']);
@@ -968,12 +1027,13 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
         <PlateHighlight objects={objects} plateId={selectedPlateId} />
       )}
 
-      {/* Ghost Zones — nur in Möbel-Ebene + aktive Selektion (Klick ins Leere blendet aus) */}
+      {/* Ghost Zones — nur in Moebel-Ebene + aktive Selektion (Klick ins Leere blendet aus) */}
       <group name="ghost-zones">
         {drillLevel === 'moebel' && selectedCell && ghostZones.map(zone => (
           <GhostZone
-            key={zone.side}
-            side={zone.side}
+            key={`ghost_${zone.row}_${zone.col}`}
+            row={zone.row}
+            col={zone.col}
             position={zone.position}
             size={zone.size}
             onClick={handleGhostClick}
@@ -981,20 +1041,13 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
         ))}
       </group>
 
-      {/* Remove + Add Buttons — nur bei aktiver Selektion */}
+      {/* Remove Buttons — nur bei aktiver Selektion, auf allen aktiven Zellen */}
       <group name="cell-buttons">
         {drillLevel === 'moebel' && selectedCell && cellButtons.removes.map(rp => (
           <RemoveButton
             key={`rm_${rp.row}_${rp.col}`}
             position={rp.position}
             onClick={() => onRemoveElement?.(rp.row, rp.col)}
-          />
-        ))}
-        {drillLevel === 'moebel' && selectedCell && cellButtons.adds.map(ap => (
-          <AddCellButton
-            key={`add_${ap.row}_${ap.col}`}
-            position={ap.position}
-            onClick={() => onAddCell?.(ap.row, ap.col)}
           />
         ))}
       </group>

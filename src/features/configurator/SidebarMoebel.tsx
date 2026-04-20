@@ -48,27 +48,6 @@ export default function SidebarMoebel({ state, actions }: Props) {
 
       <Divider />
 
-      {/* -- TIEFENEBENEN -- */}
-      <Section label="Tiefe (Ebenen)">
-        <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-          {[1, 2, 3, 4].map(d => (
-            <button
-              key={d}
-              onClick={() => actions.setDepthLayers(d)}
-              style={{
-                flex: 1, padding: '6px 0', borderRadius: 8, border: 'none',
-                background: state.depthLayers === d ? '#171614' : '#F2EFE9',
-                color: state.depthLayers === d ? '#FAFAF8' : '#6A6660',
-                fontSize: 11, cursor: 'pointer', transition: 'all 0.14s ease',
-                fontWeight: state.depthLayers === d ? 500 : 400,
-              }}
-            >{d}</button>
-          ))}
-        </div>
-      </Section>
-
-      <Divider />
-
       {/* -- FACHBOEDEN-TOGGLE -- */}
       <Section label="Fachboeden">
         <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>

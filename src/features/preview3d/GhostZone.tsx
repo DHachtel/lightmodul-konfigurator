@@ -4,18 +4,22 @@ import { useState } from 'react';
 import { Html, Edges } from '@react-three/drei';
 import * as THREE from 'three';
 
-export type GhostSide = 'left' | 'right' | 'top';
+/** Legacy-Typ fuer Abwaertskompatibilitaet */
+export type GhostSide = 'left' | 'right' | 'top' | 'bottom';
 
 interface GhostZoneProps {
-  side: GhostSide;
+  /** Eindeutiger Schluessel fuer React — wird nicht mehr fuer Logik benutzt */
+  side?: GhostSide;
+  row: number;
+  col: number;
   position: [number, number, number];
   size: [number, number, number];
-  onClick: (side: GhostSide) => void;
+  onClick: (row: number, col: number) => void;
 }
 
 const GHOST_COLOR = new THREE.Color('#E8E5DF').convertSRGBToLinear();
 
-export default function GhostZone({ side, position, size, onClick }: GhostZoneProps) {
+export default function GhostZone({ row, col, position, size, onClick }: GhostZoneProps) {
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -24,7 +28,7 @@ export default function GhostZone({ side, position, size, onClick }: GhostZonePr
         position={position}
         onPointerEnter={(e) => { e.stopPropagation(); setHovered(true); }}
         onPointerLeave={() => setHovered(false)}
-        onClick={(e) => { e.stopPropagation(); onClick(side); }}
+        onClick={(e) => { e.stopPropagation(); onClick(row, col); }}
       >
         <boxGeometry args={size} />
         <meshStandardMaterial

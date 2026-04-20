@@ -16,7 +16,7 @@ import { ELEMENT_SIZE_MM } from '@/core/constants';
 import { buildBOMRowsExtended, downloadXLSXExtended } from '@/features/bom/exportXLS';
 import type { ThreeCanvasHandle } from '@/features/preview3d/Preview3D';
 import type { ConfigState } from '@/core/types';
-import type { GhostSide } from '@/features/preview3d/GhostZone';
+// GhostSide nicht mehr benötigt — Ghost Zones arbeiten jetzt zellbasiert
 import SidebarMoebel from './SidebarMoebel';
 import SidebarElement from './SidebarElement';
 import SidebarPlatte from './SidebarPlatte';
@@ -92,11 +92,12 @@ function ConfiguratorShellInner() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [drillActions]);
 
-  // Ghost Zone
-  const handleGhostConfirm = useCallback((side: GhostSide) => {
-    if (side === 'left') actions.addFilledColLeft();
-    else if (side === 'right') actions.addFilledColRight();
-    else if (side === 'top') actions.addFilledRowTop();
+  // Ghost Zone: Grid-Erweiterung bei Rand-Ghost-Zones
+  const handleExpandAndAdd = useCallback((direction: 'left' | 'right' | 'top' | 'bottom', _atIndex: number) => {
+    if (direction === 'left') actions.addFilledColLeft();
+    else if (direction === 'right') actions.addFilledColRight();
+    else if (direction === 'top') actions.addFilledRowTop();
+    else if (direction === 'bottom') actions.addFilledRowBottom();
   }, [actions]);
 
   const handleRemoveElement = useCallback((row: number, col: number) => {
@@ -390,7 +391,8 @@ function ConfiguratorShellInner() {
           drillLevel={drill.level}
           selectedCell={drill.selectedCell}
           selectedPlateId={drill.selectedPlateId}
-          onGhostConfirm={handleGhostConfirm}
+          onGhostClick={handleAddCell}
+          onExpandAndAdd={handleExpandAndAdd}
           onRemoveElement={handleRemoveElement}
           onAddCell={handleAddCell}
           onSetCol={actions.setCol}
