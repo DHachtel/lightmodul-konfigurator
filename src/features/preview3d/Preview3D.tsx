@@ -161,43 +161,45 @@ function PlateHighlight({
   );
 }
 
-// ── FacePlusButton — "+" auf Zellenflächen für Grid-Erweiterung ──────────────
+// ── PhantomElement — Ghost-Box für Grid-Erweiterung ──────────────────────────
 
-function FacePlusButton({ position, rotation, onClick }: {
+function PhantomElement({ position, size, onClick }: {
   position: [number, number, number];
-  rotation: [number, number, number];
+  size: [number, number, number];
   onClick: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
-  const size = ELEMENT_SIZE_MM * 0.85 * S; // 510mm Hover-Fläche (fast ganze Zellseite)
 
   return (
-    <group position={position} rotation={rotation}>
-      {/* Große unsichtbare Hover-Fläche — fängt Maus-Events */}
+    <group position={position}>
       <mesh
-        onPointerOver={(e) => { e.stopPropagation(); setHovered(true); }}
-        onPointerOut={() => setHovered(false)}
+        onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer'; }}
+        onPointerOut={() => { setHovered(false); document.body.style.cursor = ''; }}
         onClick={(e) => { e.stopPropagation(); onClick(); }}
       >
-        <planeGeometry args={[size, size]} />
+        <boxGeometry args={size} />
         <meshBasicMaterial
-          color="#999999"
+          color="#888888"
           transparent
-          opacity={hovered ? 0.18 : 0.0}
-          side={THREE.DoubleSide}
+          opacity={hovered ? 0.15 : 0.0}
           depthWrite={false}
         />
       </mesh>
-      {/* "+" nur bei Hover sichtbar */}
+      {/* Wireframe edges — always visible but very subtle */}
+      <lineSegments>
+        <edgesGeometry args={[new THREE.BoxGeometry(...size)]} />
+        <lineBasicMaterial color={hovered ? '#666' : '#ccc'} transparent opacity={hovered ? 0.6 : 0.15} />
+      </lineSegments>
+      {/* "+" only on hover */}
       {hovered && (
         <Html center style={{ pointerEvents: 'none' }}>
           <div style={{
-            width: 32, height: 32, borderRadius: '50%',
-            background: 'rgba(23,22,20,0.7)',
+            width: 36, height: 36, borderRadius: '50%',
+            background: 'rgba(23,22,20,0.75)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#fff', fontSize: 18, fontWeight: 300,
+            color: '#fff', fontSize: 20, fontWeight: 300,
             userSelect: 'none',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.4)',
           }}>+</div>
         </Html>
       )}
@@ -720,165 +722,142 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
 
   const objects = useModuleGeometry(state);
 
-  // ── Face Plus Buttons: "+" auf Flächen aktiver Zellen für Erweiterung ──
-  interface FacePlus {
+  // ── Phantom Elements: Ghost-Boxen für Grid-Erweiterung ──
+  interface PhantomPos {
     id: string;
     position: [number, number, number];
-    rotation: [number, number, number];
+    size: [number, number, number];
     targetRow: number;
     targetCol: number;
     action: 'internal' | 'expandLeft' | 'expandRight' | 'expandTop' | 'depth';
   }
 
-  const facePlusButtons = useMemo<FacePlus[]>(() => {
-    const buttons: FacePlus[] = [];
+  const phantomElements = useMemo<PhantomPos[]>(() => {
+    const phantoms: PhantomPos[] = [];
     const nR = state.rows.length;
     const nC = state.cols.length;
     const nD = state.depthLayers;
 
-    // Koordinatensystem identisch zu useModuleGeometry
-    const totalW = nC * ELEMENT_SIZE_MM;
-    const totalD = nD * ELEMENT_SIZE_MM;
+    const sEl = ELEMENT_SIZE_MM;
+    const totalW = nC * sEl;
+    const totalH = nR * sEl;
+    const totalD = nD * sEl;
     const xBase = -totalW / 2;
     const yBase = 0;
     const zBase = -totalD / 2;
-    const zCenter = (zBase + totalD / 2) * S;
 
-    // Hilfsfunktionen
+    const boxW = sEl * S;
+    const boxH = sEl * S;
+    const boxD = totalD * S;
+
     const isActive = (r: number, c: number) =>
       r >= 0 && r < nR && c >= 0 && c < nC &&
       (state.grid[r]?.[c]?.some(cell => cell.type !== '') ?? false);
 
-    // Bereits platzierte Buttons tracken (Deduplizierung)
-    const placed = new Set<string>();
+    const hasSupport = (r: number, c: number) => {
+      if (r === nR - 1) return true;
+      return isActive(r + 1, c);
+    };
 
+    const hasActiveNeighbor = (r: number, c: number) =>
+      isActive(r - 1, c) || isActive(r + 1, c) ||
+      isActive(r, c - 1) || isActive(r, c + 1);
+
+    const phantomPos = (r: number, c: number): [number, number, number] => [
+      (xBase + (c + 0.5) * sEl) * S,
+      (yBase + (nR - r - 0.5) * sEl) * S,
+      (zBase + totalD / 2) * S,
+    ];
+
+    // Interne leere Zellen mit aktivem Nachbarn + Support
     for (let r = 0; r < nR; r++) {
       for (let c = 0; c < nC; c++) {
-        if (!isActive(r, c)) continue;
+        if (isActive(r, c)) continue;
+        if (!hasSupport(r, c)) continue;
+        if (!hasActiveNeighbor(r, c)) continue;
 
-        // TOP: Zelle darüber leer oder Grid-Erweiterung nach oben
-        const targetTopR = r - 1;
-        const topKey = `top_${targetTopR}_${c}`;
-        if (!placed.has(topKey)) {
-          if (targetTopR >= 0 && !isActive(targetTopR, c)) {
-            // Interne leere Zelle oberhalb — Support ist gegeben (aktive Zelle darunter = (r,c))
-            buttons.push({
-              id: topKey,
-              position: [(xBase + (c + 0.5) * ELEMENT_SIZE_MM) * S, (yBase + (nR - r) * ELEMENT_SIZE_MM) * S, zCenter],
-              rotation: [-Math.PI / 2, 0, 0],
-              targetRow: targetTopR, targetCol: c,
-              action: 'internal',
-            });
-            placed.add(topKey);
-          } else if (targetTopR < 0 && nR < MAX_ROWS) {
-            // Grid-Erweiterung nach oben
-            buttons.push({
-              id: topKey,
-              position: [(xBase + (c + 0.5) * ELEMENT_SIZE_MM) * S, (yBase + nR * ELEMENT_SIZE_MM) * S, zCenter],
-              rotation: [-Math.PI / 2, 0, 0],
-              targetRow: -1, targetCol: c,
-              action: 'expandTop',
-            });
-            placed.add(topKey);
-          }
-        }
-
-        // LEFT: Zelle links leer oder Grid-Erweiterung nach links
-        const targetLeftC = c - 1;
-        const leftKey = `left_${r}_${targetLeftC}`;
-        if (!placed.has(leftKey)) {
-          if (targetLeftC >= 0 && !isActive(r, targetLeftC)) {
-            // Support prüfen: Bodenzeile oder aktive Zelle darunter
-            const hasSupport = r === nR - 1 || isActive(r + 1, targetLeftC);
-            if (hasSupport) {
-              buttons.push({
-                id: leftKey,
-                position: [(xBase + c * ELEMENT_SIZE_MM) * S, (yBase + (nR - r - 0.5) * ELEMENT_SIZE_MM) * S, zCenter],
-                rotation: [0, -Math.PI / 2, 0],
-                targetRow: r, targetCol: targetLeftC,
-                action: 'internal',
-              });
-              placed.add(leftKey);
-            }
-          } else if (targetLeftC < 0 && nC < MAX_COLS) {
-            // Grid-Erweiterung nach links — Support: Bodenzeile oder aktive Zelle unterhalb in neuer Spalte (nicht prüfbar, da Spalte noch nicht existiert — nur Bodenzeile erlauben)
-            const hasSupport = r === nR - 1 || isActive(r + 1, c); // Approximation: wenn darunter in aktueller Spalte aktiv, wird auch links erweitert
-            if (hasSupport) {
-              buttons.push({
-                id: leftKey,
-                position: [(xBase) * S, (yBase + (nR - r - 0.5) * ELEMENT_SIZE_MM) * S, zCenter],
-                rotation: [0, -Math.PI / 2, 0],
-                targetRow: r, targetCol: -1,
-                action: 'expandLeft',
-              });
-              placed.add(leftKey);
-            }
-          }
-        }
-
-        // RIGHT: Zelle rechts leer oder Grid-Erweiterung nach rechts
-        const targetRightC = c + 1;
-        const rightKey = `right_${r}_${targetRightC}`;
-        if (!placed.has(rightKey)) {
-          if (targetRightC < nC && !isActive(r, targetRightC)) {
-            // Support prüfen
-            const hasSupport = r === nR - 1 || isActive(r + 1, targetRightC);
-            if (hasSupport) {
-              buttons.push({
-                id: rightKey,
-                position: [(xBase + (c + 1) * ELEMENT_SIZE_MM) * S, (yBase + (nR - r - 0.5) * ELEMENT_SIZE_MM) * S, zCenter],
-                rotation: [0, Math.PI / 2, 0],
-                targetRow: r, targetCol: targetRightC,
-                action: 'internal',
-              });
-              placed.add(rightKey);
-            }
-          } else if (targetRightC >= nC && nC < MAX_COLS) {
-            const hasSupport = r === nR - 1 || isActive(r + 1, c);
-            if (hasSupport) {
-              buttons.push({
-                id: rightKey,
-                position: [(xBase + (c + 1) * ELEMENT_SIZE_MM) * S, (yBase + (nR - r - 0.5) * ELEMENT_SIZE_MM) * S, zCenter],
-                rotation: [0, Math.PI / 2, 0],
-                targetRow: r, targetCol: nC,
-                action: 'expandRight',
-              });
-              placed.add(rightKey);
-            }
-          }
-        }
-
-        // BACK: Tiefenerweiterung — nur wenn nD < MAX_DEPTH
-        if (nD < MAX_DEPTH) {
-          const backKey = `back_${r}_${c}`;
-          if (!placed.has(backKey)) {
-            buttons.push({
-              id: backKey,
-              position: [(xBase + (c + 0.5) * ELEMENT_SIZE_MM) * S, (yBase + (nR - r - 0.5) * ELEMENT_SIZE_MM) * S, (zBase + totalD) * S],
-              rotation: [0, 0, 0],
-              targetRow: r, targetCol: c,
-              action: 'depth',
-            });
-            placed.add(backKey);
-          }
-        }
+        phantoms.push({
+          id: `phantom_${r}_${c}`,
+          position: phantomPos(r, c),
+          size: [boxW, boxH, boxD],
+          targetRow: r, targetCol: c,
+          action: 'internal',
+        });
       }
     }
 
-    return buttons;
+    // LEFT edge: fuer jede Zeile wo col=0 aktiv ist
+    if (nC < MAX_COLS) {
+      for (let r = 0; r < nR; r++) {
+        if (!isActive(r, 0)) continue;
+        if (r !== nR - 1 && !isActive(r + 1, 0)) continue;
+        phantoms.push({
+          id: `phantom_expand_left_${r}`,
+          position: [(xBase - sEl / 2) * S, (yBase + (nR - r - 0.5) * sEl) * S, (zBase + totalD / 2) * S],
+          size: [boxW, boxH, boxD],
+          targetRow: r, targetCol: -1,
+          action: 'expandLeft',
+        });
+      }
+    }
+
+    // RIGHT edge: fuer jede Zeile wo letzte Spalte aktiv ist
+    if (nC < MAX_COLS) {
+      for (let r = 0; r < nR; r++) {
+        if (!isActive(r, nC - 1)) continue;
+        if (r !== nR - 1 && !isActive(r + 1, nC - 1)) continue;
+        phantoms.push({
+          id: `phantom_expand_right_${r}`,
+          position: [(xBase + totalW + sEl / 2) * S, (yBase + (nR - r - 0.5) * sEl) * S, (zBase + totalD / 2) * S],
+          size: [boxW, boxH, boxD],
+          targetRow: r, targetCol: nC,
+          action: 'expandRight',
+        });
+      }
+    }
+
+    // TOP edge: fuer jede Spalte wo row=0 aktiv ist
+    if (nR < MAX_ROWS) {
+      for (let c = 0; c < nC; c++) {
+        if (!isActive(0, c)) continue;
+        phantoms.push({
+          id: `phantom_expand_top_${c}`,
+          position: [(xBase + (c + 0.5) * sEl) * S, (yBase + (nR + 0.5) * sEl) * S, (zBase + totalD / 2) * S],
+          size: [boxW, boxH, boxD],
+          targetRow: -1, targetCol: c,
+          action: 'expandTop',
+        });
+      }
+    }
+
+    // DEPTH: ein einzelnes Phantom hinter dem gesamten Moebel
+    if (nD < MAX_DEPTH) {
+      const hasAny = state.grid.some(row => row.some(col => col.some(cell => cell.type !== '')));
+      if (hasAny) {
+        phantoms.push({
+          id: 'phantom_expand_depth',
+          position: [(xBase + totalW / 2) * S, (yBase + totalH / 2) * S, (zBase + totalD + sEl / 2) * S],
+          size: [totalW * S, totalH * S, boxW],
+          targetRow: -2, targetCol: -2,
+          action: 'depth',
+        });
+      }
+    }
+
+    return phantoms;
   }, [state.grid, state.cols, state.rows, state.depthLayers]);
 
-  // Face Plus Button Klick-Handler
-  const handleFacePlusClick = useCallback((fp: FacePlus) => {
-    if (fp.action === 'internal') {
-      onAddCell?.(fp.targetRow, fp.targetCol);
-    } else if (fp.action === 'expandLeft') {
-      onExpandAndAdd?.('left', fp.targetRow);
-    } else if (fp.action === 'expandRight') {
-      onExpandAndAdd?.('right', fp.targetRow);
-    } else if (fp.action === 'expandTop') {
-      onExpandAndAdd?.('top', fp.targetCol);
-    } else if (fp.action === 'depth') {
+  // Phantom Element Klick-Handler
+  const handlePhantomClick = useCallback((phantom: PhantomPos) => {
+    if (phantom.action === 'internal') {
+      onAddCell?.(phantom.targetRow, phantom.targetCol);
+    } else if (phantom.action === 'expandLeft') {
+      onExpandAndAdd?.('left', phantom.targetRow);
+    } else if (phantom.action === 'expandRight') {
+      onExpandAndAdd?.('right', phantom.targetRow);
+    } else if (phantom.action === 'expandTop') {
+      onExpandAndAdd?.('top', phantom.targetCol);
+    } else if (phantom.action === 'depth') {
       onExpandAndAdd?.('depth', 0);
     }
   }, [onAddCell, onExpandAndAdd]);
@@ -1102,14 +1081,14 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
         <PlateHighlight objects={objects} plateId={selectedPlateId} />
       )}
 
-      {/* Face Plus Buttons — auf Flächen aktiver Zellen */}
-      <group name="face-plus-buttons">
-        {facePlusButtons.map(fp => (
-          <FacePlusButton
-            key={fp.id}
-            position={fp.position}
-            rotation={fp.rotation}
-            onClick={() => handleFacePlusClick(fp)}
+      {/* Phantom Elements — Ghost-Boxen fuer Grid-Erweiterung */}
+      <group name="ghost-zones">
+        {phantomElements.map(ph => (
+          <PhantomElement
+            key={ph.id}
+            position={ph.position}
+            size={ph.size}
+            onClick={() => handlePhantomClick(ph)}
           />
         ))}
       </group>
