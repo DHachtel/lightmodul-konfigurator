@@ -58,6 +58,8 @@ export interface ConfigActions {
   addFilledColRight(): void;
   addFilledRowTop(): void;
   addFilledRowBottom(): void;
+  /** Grid erweitern + exakt 1 Zelle aktivieren (atomar) */
+  expandAndActivateCell(direction: 'left' | 'right' | 'top', atIndex: number): void;
   // Fehler-State
   gravityError: string | null;
   clearGravityError(): void;
@@ -264,6 +266,45 @@ export function useConfigStore(): [ConfigState, ConfigActions, () => void] {
         }));
       });
       return { ...s, rows: [...s.rows, PAD_ROW_H], grid: [...s.grid, newRow] };
+    }),
+
+    // ── Atomar: Grid erweitern + 1 Zelle aktivieren ──────────────────────
+    expandAndActivateCell: (direction, atIndex) => update(s => {
+      const nD = s.depthLayers;
+      if (direction === 'left') {
+        if (s.cols.length >= MAX_COLS) return s;
+        const cols = [PAD_COL_W, ...s.cols];
+        const grid: Grid = s.grid.map((rowArr, ri) => {
+          // Neue leere Spalte vorne einfügen, nur bei atIndex (=row) aktivieren
+          const cell: Cell = ri === atIndex
+            ? { type: 'O' as CellType, shelves: 0 }
+            : newCell();
+          return [Array.from({ length: nD }, () => ({ ...cell })), ...rowArr];
+        });
+        return { ...s, cols, grid };
+      }
+      if (direction === 'right') {
+        if (s.cols.length >= MAX_COLS) return s;
+        const cols = [...s.cols, PAD_COL_W];
+        const grid: Grid = s.grid.map((rowArr, ri) => {
+          const cell: Cell = ri === atIndex
+            ? { type: 'O' as CellType, shelves: 0 }
+            : newCell();
+          return [...rowArr, Array.from({ length: nD }, () => ({ ...cell }))];
+        });
+        return { ...s, cols, grid };
+      }
+      if (direction === 'top') {
+        if (s.rows.length >= MAX_ROWS) return s;
+        const newRow: Cell[][] = Array.from({ length: s.cols.length }, (_, ci) => {
+          const cell: Cell = ci === atIndex
+            ? { type: 'O' as CellType, shelves: 0 }
+            : newCell();
+          return Array.from({ length: nD }, () => ({ ...cell }));
+        });
+        return { ...s, rows: [PAD_ROW_H, ...s.rows], grid: [newRow, ...s.grid] };
+      }
+      return s;
     }),
 
     // ── Fehler-State ──────────────────────────────────────────────────────
