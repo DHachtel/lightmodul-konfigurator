@@ -14,6 +14,41 @@ function newCell(): Cell {
   return { type: '', shelves: 0 };
 }
 
+/** Entfernt komplett leere Rand-Spalten und -Zeilen (aber nie die letzte) */
+function trimEmptyEdges(s: ConfigState): ConfigState {
+  let { cols, rows, grid } = s;
+  const nD = s.depthLayers;
+
+  const isRowEmpty = (r: number) =>
+    grid[r].every(colArr => colArr.every(cell => cell.type === ''));
+  const isColEmpty = (c: number) =>
+    grid.every(rowArr => rowArr[c].every(cell => cell.type === ''));
+
+  // Leere Zeilen oben entfernen
+  while (rows.length > 1 && isRowEmpty(0)) {
+    rows = rows.slice(1);
+    grid = grid.slice(1);
+  }
+  // Leere Zeilen unten entfernen
+  while (rows.length > 1 && isRowEmpty(grid.length - 1)) {
+    rows = rows.slice(0, -1);
+    grid = grid.slice(0, -1);
+  }
+  // Leere Spalten links entfernen
+  while (cols.length > 1 && isColEmpty(0)) {
+    cols = cols.slice(1);
+    grid = grid.map(rowArr => rowArr.slice(1));
+  }
+  // Leere Spalten rechts entfernen
+  while (cols.length > 1 && isColEmpty(grid[0].length - 1)) {
+    cols = cols.slice(0, -1);
+    grid = grid.map(rowArr => rowArr.slice(0, -1));
+  }
+
+  if (cols === s.cols && rows === s.rows) return s; // nichts geändert
+  return { ...s, cols, rows, grid };
+}
+
 /** Baut ein neues 3D-Grid aus einem bestehenden (oder leerem) Grid */
 function buildGrid3D(nR: number, nC: number, nD: number, existing?: Grid): Grid {
   return Array.from({ length: nR }, (_, r) =>
@@ -109,7 +144,9 @@ export function useConfigStore(): [ConfigState, ConfigActions, () => void] {
             });
           })
         );
-        return { ...s, grid };
+        // Nach Entfernen (type='') automatisch leere Ränder aufräumen
+        const next = { ...s, grid };
+        return t === '' ? trimEmptyEdges(next) : next;
       });
     },
 
@@ -268,70 +305,48 @@ export function useConfigStore(): [ConfigState, ConfigActions, () => void] {
       return { ...s, rows: [...s.rows, PAD_ROW_H], grid: [...s.grid, newRow] };
     }),
 
-    // ── Atomar: Grid erweitern + Zellen aktivieren ────────────────────────
-    // Links/Rechts: aktiviert alle Zellen in der neuen Spalte die einen
-    //               aktiven Nachbarn in der bestehenden Randspalte haben
-    //               UND Support (Schwerkraft) gegeben ist.
-    // Oben: aktiviert nur die geklickte Spalte (1 Element stapeln).
+    // ── Atomar: Grid erweitern + exakt 1 Zelle aktivieren + aufräumen ─────
     expandAndActivateCell: (direction, atIndex) => update(s => {
       const nD = s.depthLayers;
-      const nR = s.grid.length;
 
-      // Hilfsfunktion: ist Zelle (r, c) aktiv?
-      const active = (r: number, c: number) =>
-        r >= 0 && r < nR && c >= 0 && c < s.cols.length &&
-        (s.grid[r]?.[c]?.some(cell => cell.type !== '') ?? false);
+      let next = { ...s };
 
       if (direction === 'left') {
         if (s.cols.length >= MAX_COLS) return s;
         const cols = [PAD_COL_W, ...s.cols];
-        // Neue Spalte: aktiviere jede Zeile wo col=0 aktiv ist (= Nachbar rechts)
-        // UND Support gegeben (Bodenzeile oder Zeile darunter auch aktiviert wird)
-        // Von unten nach oben aufbauen (Schwerkraft)
-        const shouldActivate: boolean[] = Array(nR).fill(false);
-        for (let r = nR - 1; r >= 0; r--) {
-          if (!active(r, 0)) continue; // kein Nachbar rechts
-          const hasSupport = r === nR - 1 || shouldActivate[r + 1];
-          if (hasSupport) shouldActivate[r] = true;
-        }
         const grid: Grid = s.grid.map((rowArr, ri) => {
-          const cell: Cell = shouldActivate[ri]
+          const cell: Cell = ri === atIndex
             ? { type: 'O' as CellType, shelves: 0 }
             : newCell();
           return [Array.from({ length: nD }, () => ({ ...cell })), ...rowArr];
         });
-        return { ...s, cols, grid };
-      }
-      if (direction === 'right') {
+        next = { ...next, cols, grid };
+      } else if (direction === 'right') {
         if (s.cols.length >= MAX_COLS) return s;
         const cols = [...s.cols, PAD_COL_W];
-        const lastC = s.cols.length - 1;
-        const shouldActivate: boolean[] = Array(nR).fill(false);
-        for (let r = nR - 1; r >= 0; r--) {
-          if (!active(r, lastC)) continue;
-          const hasSupport = r === nR - 1 || shouldActivate[r + 1];
-          if (hasSupport) shouldActivate[r] = true;
-        }
         const grid: Grid = s.grid.map((rowArr, ri) => {
-          const cell: Cell = shouldActivate[ri]
+          const cell: Cell = ri === atIndex
             ? { type: 'O' as CellType, shelves: 0 }
             : newCell();
           return [...rowArr, Array.from({ length: nD }, () => ({ ...cell }))];
         });
-        return { ...s, cols, grid };
-      }
-      if (direction === 'top') {
+        next = { ...next, cols, grid };
+      } else if (direction === 'top') {
         if (s.rows.length >= MAX_ROWS) return s;
-        // Oben: nur die geklickte Spalte aktivieren (1 Element stapeln)
         const newRow: Cell[][] = Array.from({ length: s.cols.length }, (_, ci) => {
           const cell: Cell = ci === atIndex
             ? { type: 'O' as CellType, shelves: 0 }
             : newCell();
           return Array.from({ length: nD }, () => ({ ...cell }));
         });
-        return { ...s, rows: [PAD_ROW_H, ...s.rows], grid: [newRow, ...s.grid] };
+        next = { ...next, rows: [PAD_ROW_H, ...s.rows], grid: [newRow, ...s.grid] };
+      } else {
+        return s;
       }
-      return s;
+
+      // Aufräumen: komplett leere Randspalten/-zeilen entfernen
+      next = trimEmptyEdges(next);
+      return next;
     }),
 
     // ── Fehler-State ──────────────────────────────────────────────────────
