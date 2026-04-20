@@ -847,6 +847,40 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
       }
     }
 
+    // ── 3. TIEFE (Z-Achse): Vorne und Hinten ─────────────────────────────
+    // Ein Phantom pro aktiver Zelle, jeweils 600×600×600
+    if (nD < MAX_DEPTH) {
+      for (let r = 0; r < nR; r++) {
+        for (let c = 0; c < nC; c++) {
+          if (!isActive(r, c)) continue;
+          // HINTEN (Z+)
+          phantoms.push({
+            id: `ph_back_${r}_${c}`,
+            position: [
+              (xBase + (c + 0.5) * sEl) * S,
+              (yBase + (nR - r - 0.5) * sEl) * S,
+              (zBase + totalD + sEl / 2) * S,
+            ],
+            size: [boxSide, boxSide, boxSide],
+            targetRow: r, targetCol: c,
+            action: 'depth',
+          });
+          // VORNE (Z-)
+          phantoms.push({
+            id: `ph_front_${r}_${c}`,
+            position: [
+              (xBase + (c + 0.5) * sEl) * S,
+              (yBase + (nR - r - 0.5) * sEl) * S,
+              (zBase - sEl / 2) * S,
+            ],
+            size: [boxSide, boxSide, boxSide],
+            targetRow: r, targetCol: c,
+            action: 'depth',
+          });
+        }
+      }
+    }
+
     return phantoms;
   }, [state.grid, state.cols, state.rows, state.depthLayers]);
 
