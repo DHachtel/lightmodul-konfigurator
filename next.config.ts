@@ -31,6 +31,13 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // @react-pdf/renderer benötigt fontkit mit korrektem ESM-Pfad
+  serverExternalPackages: ['@react-pdf/renderer', '@react-pdf/font', 'fontkit'],
+  turbopack: {
+    resolveAlias: {
+      'fontkit/dist/module.mjs': 'fontkit',
+    },
+  },
 };
 
 export default nextConfig;

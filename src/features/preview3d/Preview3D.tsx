@@ -6,23 +6,20 @@ import { Canvas, useThree } from '@react-three/fiber';
 import { ContactShadows, CameraControls, Edges } from '@react-three/drei';
 import type CameraControlsImpl from 'camera-controls';
 import * as THREE from 'three';
-
-// Shape and Path: runtime classes from three.js, types not fully exported in @types/three
-interface ShapeLike {
-  moveTo(x: number, y: number): void;
-  lineTo(x: number, y: number): void;
-  quadraticCurveTo(cpX: number, cpY: number, x: number, y: number): void;
-  closePath(): void;
-  holes: PathLike[];
-}
-interface PathLike {
-  moveTo(x: number, y: number): void;
-  lineTo(x: number, y: number): void;
-  closePath(): void;
-}
-const ShapeCtor = (THREE as unknown as Record<string, new () => ShapeLike>).Shape;
-const PathCtor = (THREE as unknown as Record<string, new () => PathLike>).Path;
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+
+// THREE.Shape/Path/ExtrudeGeometry existieren zur Laufzeit, aber @types/three
+// exportiert sie nicht direkt. Zugriff über runtime-Cast:
+const ShapeCtor = (THREE as Record<string, unknown>).Shape as new () => {
+  moveTo(x: number, y: number): void; lineTo(x: number, y: number): void;
+  quadraticCurveTo(cpX: number, cpY: number, x: number, y: number): void;
+  closePath(): void; holes: InstanceType<typeof PathCtor>[];
+};
+const PathCtor = (THREE as Record<string, unknown>).Path as new () => {
+  moveTo(x: number, y: number): void; lineTo(x: number, y: number): void; closePath(): void;
+};
+const ExtrudeGeometryCtor = (THREE as Record<string, unknown>).ExtrudeGeometry as
+  new (shape: unknown, options: { depth: number; bevelEnabled: boolean }) => THREE.BufferGeometry;
 import type { ConfigState } from '@/core/types';
 import { ELEMENT_SIZE_MM, MAT_BY_V, MATERIALS, MAX_COLS, MAX_ROWS } from '@/core/constants';
 import { useModuleGeometry, type SceneObject } from './useModuleGeometry';
@@ -183,7 +180,7 @@ const CABLE_W = 120 * S; // 120mm Breite
 const CABLE_H = 80 * S;  // 80mm Höhe
 const CABLE_MARGIN = 10 * S; // 10mm Abstand vom Rand
 
-function createPlateWithHole(w: number, h: number, d: number): THREE.ExtrudeGeometry {
+function createPlateWithHole(w: number, h: number, d: number): THREE.BufferGeometry {
   // Dünnste Dimension = Plattendicke, die zwei größeren = sichtbare Fläche
   const min = Math.min(w, h, d);
 
@@ -224,7 +221,7 @@ function createPlateWithHole(w: number, h: number, d: number): THREE.ExtrudeGeom
   hole.closePath();
   shape.holes.push(hole);
 
-  const geo = new THREE.ExtrudeGeometry(shape, { depth: thickness, bevelEnabled: false });
+  const geo = new ExtrudeGeometryCtor(shape, { depth: thickness, bevelEnabled: false });
   // ExtrudeGeometry extrudiert von z=0 nach z=depth → zentrieren
   geo.translate(0, 0, -thickness / 2);
 
@@ -237,7 +234,7 @@ function createPlateWithHole(w: number, h: number, d: number): THREE.ExtrudeGeom
 }
 
 /** Platte mit abgerundeten Ecken (nur Ecken der Fläche, nicht Kanten der Dicke) */
-function createRoundedPlate(w: number, h: number, d: number, radius: number): THREE.ExtrudeGeometry {
+function createRoundedPlate(w: number, h: number, d: number, radius: number): THREE.BufferGeometry {
   // Dünnste Dimension = Plattendicke
   const min = Math.min(w, h, d);
 
@@ -267,7 +264,7 @@ function createRoundedPlate(w: number, h: number, d: number, radius: number): TH
   shape.lineTo(-hw, -hh + r);
   shape.quadraticCurveTo(-hw, -hh, -hw + r, -hh);
 
-  const geo = new THREE.ExtrudeGeometry(shape, { depth: thickness, bevelEnabled: false });
+  const geo = new ExtrudeGeometryCtor(shape, { depth: thickness, bevelEnabled: false });
   geo.translate(0, 0, -thickness / 2);
 
   if (axis === 'y') geo.rotateX(-Math.PI / 2);

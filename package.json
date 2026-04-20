@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "docs": "claude --print < UPDATE_DOCS_PROMPT.md"
+    "docs": "claude --print < UPDATE_DOCS_PROMPT.md",
+    "postinstall": "node scripts/patch-fontkit.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.3.2",
