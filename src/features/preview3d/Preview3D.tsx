@@ -738,109 +738,117 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
     const nC = state.cols.length;
     const nD = state.depthLayers;
 
-    const sEl = ELEMENT_SIZE_MM;
+    const sEl = ELEMENT_SIZE_MM; // 600mm
     const totalW = nC * sEl;
-    const totalH = nR * sEl;
     const totalD = nD * sEl;
-    const xBase = -totalW / 2;
-    const yBase = 0;
-    const zBase = -totalD / 2;
+    const xBase = -totalW / 2;    // Zentrierung X
+    const yBase = 0;               // Boden
+    const zBase = -totalD / 2;     // Zentrierung Z
 
-    const boxW = sEl * S;
-    const boxH = sEl * S;
-    const boxD = totalD * S;
+    // Einheitliche Phantom-Box Größe: immer exakt 1 Element (600×600×Tiefe)
+    const boxSide = sEl * S;       // 600mm in Three.js
+    const boxDepth = totalD * S;   // Gesamte Möbeltiefe in Three.js
 
     const isActive = (r: number, c: number) =>
       r >= 0 && r < nR && c >= 0 && c < nC &&
       (state.grid[r]?.[c]?.some(cell => cell.type !== '') ?? false);
 
-    const hasSupport = (r: number, c: number) => {
-      if (r === nR - 1) return true;
-      return isActive(r + 1, c);
+    // Support: Bodenzeile ODER aktives Element direkt darunter
+    const hasSupport = (r: number) => {
+      // Bodenzeile hat immer Support (egal welche Spalte)
+      return r === nR - 1;
+    };
+    const hasSupportAt = (r: number, c: number) => {
+      if (r === nR - 1) return true; // Bodenzeile
+      return isActive(r + 1, c);     // Element darunter aktiv
     };
 
-    const hasActiveNeighbor = (r: number, c: number) =>
-      isActive(r - 1, c) || isActive(r + 1, c) ||
-      isActive(r, c - 1) || isActive(r, c + 1);
-
-    const phantomPos = (r: number, c: number): [number, number, number] => [
+    // Position berechnen: Zellmitte in Three.js Koordinaten
+    const pos = (r: number, c: number): [number, number, number] => [
       (xBase + (c + 0.5) * sEl) * S,
       (yBase + (nR - r - 0.5) * sEl) * S,
       (zBase + totalD / 2) * S,
     ];
 
-    // Interne leere Zellen mit aktivem Nachbarn + Support
+    // ── 1. INTERNE leere Zellen ────────────────────────────────────────────
     for (let r = 0; r < nR; r++) {
       for (let c = 0; c < nC; c++) {
         if (isActive(r, c)) continue;
-        if (!hasSupport(r, c)) continue;
-        if (!hasActiveNeighbor(r, c)) continue;
+        if (!hasSupportAt(r, c)) continue;
+        // Mindestens ein aktiver 4-Nachbar
+        const hasNeighbor =
+          isActive(r - 1, c) || isActive(r + 1, c) ||
+          isActive(r, c - 1) || isActive(r, c + 1);
+        if (!hasNeighbor) continue;
 
         phantoms.push({
-          id: `phantom_${r}_${c}`,
-          position: phantomPos(r, c),
-          size: [boxW, boxH, boxD],
+          id: `ph_${r}_${c}`,
+          position: pos(r, c),
+          size: [boxSide, boxSide, boxDepth],
           targetRow: r, targetCol: c,
           action: 'internal',
         });
       }
     }
 
-    // LEFT edge: fuer jede Zeile wo col=0 aktiv ist
+    // ── 2. RAND-Erweiterung: Links, Rechts, Oben ──────────────────────────
+    // Für jede aktive Zelle am jeweiligen Rand prüfen
     if (nC < MAX_COLS) {
       for (let r = 0; r < nR; r++) {
-        if (!isActive(r, 0)) continue;
-        if (r !== nR - 1 && !isActive(r + 1, 0)) continue;
-        phantoms.push({
-          id: `phantom_expand_left_${r}`,
-          position: [(xBase - sEl / 2) * S, (yBase + (nR - r - 0.5) * sEl) * S, (zBase + totalD / 2) * S],
-          size: [boxW, boxH, boxD],
-          targetRow: r, targetCol: -1,
-          action: 'expandLeft',
-        });
+        // LINKS: Zelle bei col=0 aktiv → Phantom bei col=-1
+        if (isActive(r, 0) && hasSupportAt(r, 0)) {
+          phantoms.push({
+            id: `ph_left_${r}`,
+            position: [(xBase - sEl / 2) * S, (yBase + (nR - r - 0.5) * sEl) * S, (zBase + totalD / 2) * S],
+            size: [boxSide, boxSide, boxDepth],
+            targetRow: r, targetCol: -1,
+            action: 'expandLeft',
+          });
+        }
+        // RECHTS: Zelle bei col=nC-1 aktiv → Phantom bei col=nC
+        if (isActive(r, nC - 1) && hasSupportAt(r, nC - 1)) {
+          phantoms.push({
+            id: `ph_right_${r}`,
+            position: [(xBase + totalW + sEl / 2) * S, (yBase + (nR - r - 0.5) * sEl) * S, (zBase + totalD / 2) * S],
+            size: [boxSide, boxSide, boxDepth],
+            targetRow: r, targetCol: nC,
+            action: 'expandRight',
+          });
+        }
       }
     }
 
-    // RIGHT edge: fuer jede Zeile wo letzte Spalte aktiv ist
-    if (nC < MAX_COLS) {
-      for (let r = 0; r < nR; r++) {
-        if (!isActive(r, nC - 1)) continue;
-        if (r !== nR - 1 && !isActive(r + 1, nC - 1)) continue;
-        phantoms.push({
-          id: `phantom_expand_right_${r}`,
-          position: [(xBase + totalW + sEl / 2) * S, (yBase + (nR - r - 0.5) * sEl) * S, (zBase + totalD / 2) * S],
-          size: [boxW, boxH, boxD],
-          targetRow: r, targetCol: nC,
-          action: 'expandRight',
-        });
-      }
-    }
-
-    // TOP edge: fuer jede Spalte wo row=0 aktiv ist
+    // OBEN: Zelle bei row=0 aktiv → Phantom bei row=-1 (Support immer gegeben: darunter ist row=0)
     if (nR < MAX_ROWS) {
       for (let c = 0; c < nC; c++) {
         if (!isActive(0, c)) continue;
         phantoms.push({
-          id: `phantom_expand_top_${c}`,
+          id: `ph_top_${c}`,
           position: [(xBase + (c + 0.5) * sEl) * S, (yBase + (nR + 0.5) * sEl) * S, (zBase + totalD / 2) * S],
-          size: [boxW, boxH, boxD],
+          size: [boxSide, boxSide, boxDepth],
           targetRow: -1, targetCol: c,
           action: 'expandTop',
         });
       }
     }
 
-    // DEPTH: ein einzelnes Phantom hinter dem gesamten Moebel
+    // ── 3. TIEFE: einzelne Phantome pro aktiver Zelle hinter dem Möbel ────
     if (nD < MAX_DEPTH) {
-      const hasAny = state.grid.some(row => row.some(col => col.some(cell => cell.type !== '')));
-      if (hasAny) {
-        phantoms.push({
-          id: 'phantom_expand_depth',
-          position: [(xBase + totalW / 2) * S, (yBase + totalH / 2) * S, (zBase + totalD + sEl / 2) * S],
-          size: [totalW * S, totalH * S, boxW],
-          targetRow: -2, targetCol: -2,
-          action: 'depth',
-        });
+      for (let r = 0; r < nR; r++) {
+        for (let c = 0; c < nC; c++) {
+          if (!isActive(r, c)) continue;
+          phantoms.push({
+            id: `ph_depth_${r}_${c}`,
+            position: [
+              (xBase + (c + 0.5) * sEl) * S,
+              (yBase + (nR - r - 0.5) * sEl) * S,
+              (zBase + totalD + sEl / 2) * S,
+            ],
+            size: [boxSide, boxSide, boxSide], // 600×600×600 (eine Tiefenebene)
+            targetRow: r, targetCol: c,
+            action: 'depth',
+          });
+        }
       }
     }
 
