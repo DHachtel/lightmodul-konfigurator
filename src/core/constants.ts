@@ -82,3 +82,29 @@ export const PG_DOT: Record<string, string> = {
   PG1: '#4a7a9b',
   '—': 'transparent',
 };
+
+// ─── Artmodul-Kompatibilitätsstubs (werden in Phase 1 entfernt) ───────────────
+// Diese Exports existieren nur damit Artmodul-Komponenten kompilieren, bevor
+// sie auf Lightmodul-Logik umgebaut werden. Nicht für neue Features verwenden.
+
+/** @deprecated Artmodul-Oberflächen — kein Äquivalent in Lightmodul */
+export const MATERIALS: Material[] = PROFILE_COLORS;
+
+/** @deprecated Artmodul-Oberflächenmap — nutze stattdessen PROFILE_COLOR_BY_V */
+export const MAT_BY_V: Record<string, Material> = PROFILE_COLOR_BY_V;
+
+/** @deprecated Artmodul-Griffe — Lightmodul hat keine Griffauswahl */
+export const HANDLES: Material[] = [];
+
+/** @deprecated Artmodul-Griffmap — Lightmodul hat keine Griffauswahl */
+export const HANDLE_BY_V: Record<string, Material> = {};
+
+/** @deprecated Artmodul-Rahmengruppen — wird in Phase 1 durch Lightmodul-FrameGroups ersetzt */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const FRAME_GROUP_BY_V: Record<string, any> = {};
+
+/** @deprecated Artmodul-Breiten — Lightmodul hat fixes 600mm-Raster */
+export const WIDTHS: number[] = [600];
+
+/** @deprecated Artmodul-Höhen — Lightmodul hat fixes 600mm-Raster */
+export const HEIGHTS: number[] = [600];

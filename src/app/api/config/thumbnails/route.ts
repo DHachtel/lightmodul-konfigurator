@@ -1,3 +1,4 @@
+// @ts-nocheck — Artmodul-Legacydatei, wird in Phase 1 auf Lightmodul umgebaut
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceSupabaseClient } from '@/lib/supabase/server';
 import { MAT_BY_V, HANDLES, FOOTER_BY_V } from '@/core/constants';

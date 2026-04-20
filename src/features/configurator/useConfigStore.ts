@@ -2,9 +2,8 @@
 
 import { useState, useCallback } from 'react';
 import type { BOMResult, Cell, CellType, ConfigState, Grid } from '@/core/types';
-import { CELL_TYPES, MAX_COLS, MAX_ROWS, MAX_DEPTH, ELEMENT_SIZE_MM } from '@/core/constants';
-import { canPlace, maxShelves } from '@/core/validation';
-import { createEmptyGrid, emptyCell } from '@/core/calc';
+import { MAX_COLS, MAX_ROWS, MAX_DEPTH, ELEMENT_SIZE_MM } from '@/core/constants';
+import { maxShelves } from '@/core/validation';
 
 // ── Standardwerte ────────────────────────────────────────────────────────────
 

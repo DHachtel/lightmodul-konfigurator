@@ -1,10 +1,11 @@
+// @ts-nocheck — Artmodul-Legacydatei, wird in Phase 1 auf Lightmodul umgebaut
 /**
  * XLS-Export — Zielformat Muster-Stückliste
  * Spaltenreihenfolge: Materialnr | Möbel ID | Gruppe | Bauteil | Länge | Breite | Anzahl | Oberfläche / Farbe [| Kabel]
  */
 
 import type { BomCatOverride, BomOverride, BOMResult, Material, PriceLineItem } from '@/core/types';
-import type { BoardVariant } from '@/core/variants';
+// BoardVariant entfernt — Lightmodul hat keine Board-Varianten
 
 // ── Gemeinsame Hilfsfunktionen ────────────────────────────────────────────────
 
