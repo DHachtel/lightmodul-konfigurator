@@ -1,9 +1,9 @@
 // TODO: Preview3D muss für Lightmodul 3D-Grid angepasst werden
 'use client';
 
-import { useMemo, useEffect, useRef, useCallback, useImperativeHandle, forwardRef, Suspense } from 'react';
+import { useMemo, useEffect, useRef, useCallback, useImperativeHandle, forwardRef, Suspense, useState } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { ContactShadows, CameraControls, Edges } from '@react-three/drei';
+import { ContactShadows, CameraControls, Edges, Html } from '@react-three/drei';
 import type CameraControlsImpl from 'camera-controls';
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
@@ -21,10 +21,9 @@ const PathCtor = (THREE as Record<string, unknown>).Path as new () => {
 const ExtrudeGeometryCtor = (THREE as Record<string, unknown>).ExtrudeGeometry as
   new (shape: unknown, options: { depth: number; bevelEnabled: boolean }) => THREE.BufferGeometry;
 import type { ConfigState } from '@/core/types';
-import { ELEMENT_SIZE_MM, MAT_BY_V, MATERIALS, MAX_COLS, MAX_ROWS } from '@/core/constants';
+import { ELEMENT_SIZE_MM, MAT_BY_V, MATERIALS, MAX_COLS, MAX_ROWS, MAX_DEPTH } from '@/core/constants';
 import { useModuleGeometry, type SceneObject } from './useModuleGeometry';
 import SmartMesh from './SmartMesh';
-import GhostZone from './GhostZone';
 import RemoveButton from './RemoveButton';
 
 import ColumnRowLabels from './ColumnRowLabels';
@@ -159,6 +158,48 @@ function PlateHighlight({
       <meshBasicMaterial visible={false} />
       <Edges color="#4ade80" linewidth={2} />
     </mesh>
+  );
+}
+
+// ── FacePlusButton — "+" auf Zellenflächen für Grid-Erweiterung ──────────────
+
+function FacePlusButton({ position, rotation, onClick }: {
+  position: [number, number, number];
+  rotation: [number, number, number];
+  onClick: () => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const size = ELEMENT_SIZE_MM * 0.6 * S; // 360mm Plane
+
+  return (
+    <group position={position} rotation={rotation}>
+      {/* Unsichtbare Hover-Fläche */}
+      <mesh
+        onPointerOver={(e) => { e.stopPropagation(); setHovered(true); }}
+        onPointerOut={() => setHovered(false)}
+        onClick={(e) => { e.stopPropagation(); onClick(); }}
+      >
+        <planeGeometry args={[size, size]} />
+        <meshBasicMaterial
+          color="#888888"
+          transparent
+          opacity={hovered ? 0.25 : 0.0}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+        />
+      </mesh>
+      {/* "+" Label */}
+      <Html center style={{ pointerEvents: 'none' }}>
+        <div style={{
+          width: 28, height: 28, borderRadius: '50%',
+          background: hovered ? 'rgba(23,22,20,0.65)' : 'rgba(23,22,20,0.25)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: '#fff', fontSize: 16, fontWeight: 300,
+          transition: 'all 0.15s ease',
+          userSelect: 'none',
+        }}>+</div>
+      </Html>
+    </group>
   );
 }
 
@@ -677,15 +718,21 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
 
   const objects = useModuleGeometry(state);
 
-  // ── Ghost Zones: zellbasierte Berechnung ──
-  // Ghost Zones erscheinen an leeren Zellen mit aktivem Nachbarn (4-connected)
-  // und an den Raendern des Grids fuer Erweiterung.
-  const ghostZones = useMemo(() => {
-    const zones: { row: number; col: number; position: [number, number, number]; size: [number, number, number] }[] = [];
+  // ── Face Plus Buttons: "+" auf Flächen aktiver Zellen für Erweiterung ──
+  interface FacePlus {
+    id: string;
+    position: [number, number, number];
+    rotation: [number, number, number];
+    targetRow: number;
+    targetCol: number;
+    action: 'internal' | 'expandLeft' | 'expandRight' | 'expandTop' | 'depth';
+  }
+
+  const facePlusButtons = useMemo<FacePlus[]>(() => {
+    const buttons: FacePlus[] = [];
     const nR = state.rows.length;
     const nC = state.cols.length;
     const nD = state.depthLayers;
-    const cellSize = ELEMENT_SIZE_MM * S; // 600mm in Three.js-Einheiten
 
     // Koordinatensystem identisch zu useModuleGeometry
     const totalW = nC * ELEMENT_SIZE_MM;
@@ -693,9 +740,6 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
     const xBase = -totalW / 2;
     const yBase = 0;
     const zBase = -totalD / 2;
-
-    // Tiefe der Ghost-Zone: gesamte Moebel-Tiefe
-    const depthSize = totalD * S;
     const zCenter = (zBase + totalD / 2) * S;
 
     // Hilfsfunktionen
@@ -703,87 +747,139 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
       r >= 0 && r < nR && c >= 0 && c < nC &&
       (state.grid[r]?.[c]?.some(cell => cell.type !== '') ?? false);
 
-    // Zellposition berechnen (auch für virtuelle Rand-Positionen)
-    const cellPos = (r: number, c: number): [number, number, number] => [
-      (xBase + (c + 0.5) * ELEMENT_SIZE_MM) * S,
-      (yBase + (nR - r - 0.5) * ELEMENT_SIZE_MM) * S,
-      zCenter,
-    ];
+    // Bereits platzierte Buttons tracken (Deduplizierung)
+    const placed = new Set<string>();
 
-    // Einheitliche Logik: Scanbereich = Grid + 1 virtuelle Position an jedem Rand
-    // Bereich: row -1..nR, col -1..nC (aber: unten NICHT, also row nur bis nR-1 extern)
-    const rMin = nR < MAX_ROWS ? -1 : 0;
-    const rMax = nR - 1; // Unten: Bodenniveau, KEINE Erweiterung
-    const cMin = nC < MAX_COLS ? -1 : 0;
-    const cMax = nC < MAX_COLS ? nC : nC - 1;
+    for (let r = 0; r < nR; r++) {
+      for (let c = 0; c < nC; c++) {
+        if (!isActive(r, c)) continue;
 
-    for (let r = rMin; r <= rMax; r++) {
-      for (let c = cMin; c <= cMax; c++) {
-        // Position ist aktiv → kein Ghost
-        if (isActive(r, c)) continue;
+        // TOP: Zelle darüber leer oder Grid-Erweiterung nach oben
+        const targetTopR = r - 1;
+        const topKey = `top_${targetTopR}_${c}`;
+        if (!placed.has(topKey)) {
+          if (targetTopR >= 0 && !isActive(targetTopR, c)) {
+            // Interne leere Zelle oberhalb — Support ist gegeben (aktive Zelle darunter = (r,c))
+            buttons.push({
+              id: topKey,
+              position: [(xBase + (c + 0.5) * ELEMENT_SIZE_MM) * S, (yBase + (nR - r) * ELEMENT_SIZE_MM) * S, zCenter],
+              rotation: [-Math.PI / 2, 0, 0],
+              targetRow: targetTopR, targetCol: c,
+              action: 'internal',
+            });
+            placed.add(topKey);
+          } else if (targetTopR < 0 && nR < MAX_ROWS) {
+            // Grid-Erweiterung nach oben
+            buttons.push({
+              id: topKey,
+              position: [(xBase + (c + 0.5) * ELEMENT_SIZE_MM) * S, (yBase + nR * ELEMENT_SIZE_MM) * S, zCenter],
+              rotation: [-Math.PI / 2, 0, 0],
+              targetRow: -1, targetCol: c,
+              action: 'expandTop',
+            });
+            placed.add(topKey);
+          }
+        }
 
-        // Schwerkraft: muss Support haben
-        // Bodenzeile des Grids (r === nR-1) hat immer Support
-        // Virtuelle Positionen (r < 0 oder r >= nR) haben Support wenn darunter aktiv
-        const isBottomRow = r === nR - 1;
-        const hasSupportBelow = isActive(r + 1, c);
-        if (!isBottomRow && !hasSupportBelow) continue;
+        // LEFT: Zelle links leer oder Grid-Erweiterung nach links
+        const targetLeftC = c - 1;
+        const leftKey = `left_${r}_${targetLeftC}`;
+        if (!placed.has(leftKey)) {
+          if (targetLeftC >= 0 && !isActive(r, targetLeftC)) {
+            // Support prüfen: Bodenzeile oder aktive Zelle darunter
+            const hasSupport = r === nR - 1 || isActive(r + 1, targetLeftC);
+            if (hasSupport) {
+              buttons.push({
+                id: leftKey,
+                position: [(xBase + c * ELEMENT_SIZE_MM) * S, (yBase + (nR - r - 0.5) * ELEMENT_SIZE_MM) * S, zCenter],
+                rotation: [0, -Math.PI / 2, 0],
+                targetRow: r, targetCol: targetLeftC,
+                action: 'internal',
+              });
+              placed.add(leftKey);
+            }
+          } else if (targetLeftC < 0 && nC < MAX_COLS) {
+            // Grid-Erweiterung nach links — Support: Bodenzeile oder aktive Zelle unterhalb in neuer Spalte (nicht prüfbar, da Spalte noch nicht existiert — nur Bodenzeile erlauben)
+            const hasSupport = r === nR - 1 || isActive(r + 1, c); // Approximation: wenn darunter in aktueller Spalte aktiv, wird auch links erweitert
+            if (hasSupport) {
+              buttons.push({
+                id: leftKey,
+                position: [(xBase) * S, (yBase + (nR - r - 0.5) * ELEMENT_SIZE_MM) * S, zCenter],
+                rotation: [0, -Math.PI / 2, 0],
+                targetRow: r, targetCol: -1,
+                action: 'expandLeft',
+              });
+              placed.add(leftKey);
+            }
+          }
+        }
 
-        // Mindestens ein aktiver Nachbar (4-connected)
-        if (!isActive(r - 1, c) && !isActive(r + 1, c) &&
-            !isActive(r, c - 1) && !isActive(r, c + 1)) continue;
+        // RIGHT: Zelle rechts leer oder Grid-Erweiterung nach rechts
+        const targetRightC = c + 1;
+        const rightKey = `right_${r}_${targetRightC}`;
+        if (!placed.has(rightKey)) {
+          if (targetRightC < nC && !isActive(r, targetRightC)) {
+            // Support prüfen
+            const hasSupport = r === nR - 1 || isActive(r + 1, targetRightC);
+            if (hasSupport) {
+              buttons.push({
+                id: rightKey,
+                position: [(xBase + (c + 1) * ELEMENT_SIZE_MM) * S, (yBase + (nR - r - 0.5) * ELEMENT_SIZE_MM) * S, zCenter],
+                rotation: [0, Math.PI / 2, 0],
+                targetRow: r, targetCol: targetRightC,
+                action: 'internal',
+              });
+              placed.add(rightKey);
+            }
+          } else if (targetRightC >= nC && nC < MAX_COLS) {
+            const hasSupport = r === nR - 1 || isActive(r + 1, c);
+            if (hasSupport) {
+              buttons.push({
+                id: rightKey,
+                position: [(xBase + (c + 1) * ELEMENT_SIZE_MM) * S, (yBase + (nR - r - 0.5) * ELEMENT_SIZE_MM) * S, zCenter],
+                rotation: [0, Math.PI / 2, 0],
+                targetRow: r, targetCol: nC,
+                action: 'expandRight',
+              });
+              placed.add(rightKey);
+            }
+          }
+        }
 
-        zones.push({
-          row: r, col: c,
-          position: cellPos(r, c),
-          size: [cellSize, cellSize, depthSize],
-        });
+        // BACK: Tiefenerweiterung — nur wenn nD < MAX_DEPTH
+        if (nD < MAX_DEPTH) {
+          const backKey = `back_${r}_${c}`;
+          if (!placed.has(backKey)) {
+            buttons.push({
+              id: backKey,
+              position: [(xBase + (c + 0.5) * ELEMENT_SIZE_MM) * S, (yBase + (nR - r - 0.5) * ELEMENT_SIZE_MM) * S, (zBase + totalD) * S],
+              rotation: [0, 0, 0],
+              targetRow: r, targetCol: c,
+              action: 'depth',
+            });
+            placed.add(backKey);
+          }
+        }
       }
     }
 
-    // Tiefe (Z-Achse): Ghost-Zone hinter dem Möbel für Tiefenerweiterung
-    if (nD < 4) { // MAX_DEPTH = 4
-      // Eine große Ghost-Zone hinter dem Möbel (gesamte Breite × Höhe)
-      const hasAnyActive = state.grid.some(row => row.some(col => col.some(cell => cell.type !== '')));
-      if (hasAnyActive) {
-        zones.push({
-          row: -2, col: -2, // Spezialwert für Tiefenerweiterung
-          position: [
-            (xBase + totalW / 2) * S,
-            (yBase + nR * ELEMENT_SIZE_MM / 2) * S,
-            (zBase + totalD + ELEMENT_SIZE_MM / 2) * S,
-          ],
-          size: [totalW * S, nR * ELEMENT_SIZE_MM * S, cellSize],
-        });
-      }
-    }
-
-    return zones;
+    return buttons;
   }, [state.grid, state.cols, state.rows, state.depthLayers]);
 
-  // Ghost Zone Klick — interne leere Zellen vs. Rand-Erweiterung
-  const handleGhostClick = useCallback((row: number, col: number) => {
-    const nR = state.rows.length;
-    const nC = state.cols.length;
-
-    // Tiefenerweiterung (Spezialwert row=-2, col=-2)
-    if (row === -2 && col === -2) {
-      if (onExpandAndAdd) onExpandAndAdd('depth', 0);
-      return;
+  // Face Plus Button Klick-Handler
+  const handleFacePlusClick = useCallback((fp: FacePlus) => {
+    if (fp.action === 'internal') {
+      onAddCell?.(fp.targetRow, fp.targetCol);
+    } else if (fp.action === 'expandLeft') {
+      onExpandAndAdd?.('left', fp.targetRow);
+    } else if (fp.action === 'expandRight') {
+      onExpandAndAdd?.('right', fp.targetRow);
+    } else if (fp.action === 'expandTop') {
+      onExpandAndAdd?.('top', fp.targetCol);
+    } else if (fp.action === 'depth') {
+      onExpandAndAdd?.('depth', 0);
     }
-
-    // Interne leere Zelle: direkt mit 'O' fuellen
-    if (row >= 0 && row < nR && col >= 0 && col < nC) {
-      if (onAddCell) onAddCell(row, col);
-      return;
-    }
-
-    // Rand-Erweiterung
-    if (!onExpandAndAdd) return;
-    if (col === -1) onExpandAndAdd('left', row);
-    else if (col === nC) onExpandAndAdd('right', row);
-    else if (row === -1) onExpandAndAdd('top', col);
-  }, [state.rows.length, state.cols.length, onAddCell, onExpandAndAdd]);
+  }, [onAddCell, onExpandAndAdd]);
 
   // ── Remove Buttons: auf allen aktiven Zellen (keine Schwerkraft-Einschraenkung) ──
   const cellButtons = useMemo(() => {
@@ -1004,16 +1100,14 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
         <PlateHighlight objects={objects} plateId={selectedPlateId} />
       )}
 
-      {/* Ghost Zones — immer sichtbar */}
-      <group name="ghost-zones">
-        {ghostZones.map(zone => (
-          <GhostZone
-            key={`ghost_${zone.row}_${zone.col}`}
-            row={zone.row}
-            col={zone.col}
-            position={zone.position}
-            size={zone.size}
-            onClick={handleGhostClick}
+      {/* Face Plus Buttons — auf Flächen aktiver Zellen */}
+      <group name="face-plus-buttons">
+        {facePlusButtons.map(fp => (
+          <FacePlusButton
+            key={fp.id}
+            position={fp.position}
+            rotation={fp.rotation}
+            onClick={() => handleFacePlusClick(fp)}
           />
         ))}
       </group>
