@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceSupabaseClient } from '@/lib/supabase/server';
 import { MAT_BY_V, HANDLES, FOOTER_BY_V } from '@/core/constants';
 import { computeBOM } from '@/core/calc';
-import { computeBoardVariants } from '@/core/variants';
 import type { ConfigState, BOMResult } from '@/core/types';
 
 interface PriceRow {
@@ -77,8 +76,8 @@ function computeSimplePrice(bom: BOMResult, config: ConfigState, prices: PriceRo
     if (row) total += qty * unitPrice(row, 'PG1');
   }
 
-  // Platten + Fronten — per Variante (nutzt computeBoardVariants wie die BOM-Route)
-  const variants = computeBoardVariants(config);
+  // Platten + Fronten — per Variante (Lightmodul: keine Board-Varianten)
+  const variants: { kategorie: string; dim: string; pg: string; qty: number; kabel: boolean }[] = [];
   for (const v of variants) {
     if (v.qty <= 0) continue;
     const [b, t] = v.dim.split('×').map(Number);

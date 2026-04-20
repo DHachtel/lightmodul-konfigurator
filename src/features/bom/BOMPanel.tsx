@@ -7,7 +7,6 @@ import { computeBOM } from '@/core/calc';
 import { CABLE_HOLE_ART_NR, FOOTER_BY_V, MAT_BY_V, MATERIALS } from '@/core/constants';
 import { buildBOMRowsExtended, downloadXLSXExtended } from '@/features/bom/exportXLS';
 import { validateCatOverrides } from '@/core/validation';
-import { computeBoardVariants } from '@/core/variants';
 import { sortEntries } from '@/lib/utils';
 import type { PriceLineItem, PriceResponse } from '@/core/types';
 import { useUser } from '@/contexts/UserContext';
@@ -43,10 +42,6 @@ function sumDimMap(m: DimMap): number {
 export default function BOMPanel({ state, setCatOverride, clearCatOverride, committedBOM, moebelId, onCommit, captureScreenshot }: Props) {
 
   const bom = useMemo(() => computeBOM(state), [state]);
-  const boardVariants = useMemo(
-    () => computeBoardVariants(state),
-    [state],
-  );
   const [openCat,    setOpenCat]    = useState<string | null>(null);
   const [editAnzahl, setEditAnzahl] = useState<string>('');    // X — leer = kein Override
   const [editSurf,   setEditSurf]   = useState<string>('');    // Oberflächen-Code, leer = kein Override
@@ -197,7 +192,7 @@ export default function BOMPanel({ state, setCatOverride, clearCatOverride, comm
         pricing?.items ?? null,
         moebelId?.toString() ?? undefined,
       );
-      await downloadXLSXExtended(rows, overrideRows, `Artmodul_Stueckliste_${moebelId?.toString() ?? ts}.xlsx`);
+      await downloadXLSXExtended(rows, overrideRows, `Lightmodul_Stueckliste_${moebelId?.toString() ?? ts}.xlsx`);
     } catch (e) {
       alert('Fehler beim Export: ' + (e instanceof Error ? e.message : String(e)));
     }
@@ -231,7 +226,7 @@ export default function BOMPanel({ state, setCatOverride, clearCatOverride, comm
       }
       const blob = await res.blob();
       const ts = new Date().toLocaleDateString('de-DE').replace(/\./g, '-');
-      const filename = `Artmodul_Datenblatt_${ts}.pdf`;
+      const filename = `Lightmodul_Datenblatt_${ts}.pdf`;
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = filename; a.click();
@@ -276,7 +271,7 @@ export default function BOMPanel({ state, setCatOverride, clearCatOverride, comm
       }
       const blob = await res.blob();
       const ts = new Date().toLocaleDateString('de-DE').replace(/\./g, '-');
-      const filename = `Artmodul_Angebot_${ts}.pdf`;
+      const filename = `Lightmodul_Angebot_${ts}.pdf`;
 
       // Speichern-unter-Dialog (Chrome/Edge); Fallback auf anchor-Download (Firefox)
       if (typeof window.showSaveFilePicker === 'function') {

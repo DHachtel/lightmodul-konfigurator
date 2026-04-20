@@ -46,7 +46,7 @@ export default function LoginPage() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/lightmodul-logo.png" alt="LIGHTMODUL" className="h-8 mb-6 opacity-80" />
         <h1 className="text-[22px] font-semibold text-[#1C1A17] mb-1 tracking-tight">Händler-Login</h1>
-        <p className="text-[13px] text-[#7A7670] mb-8">Artmodul Konfigurator</p>
+        <p className="text-[13px] text-[#7A7670] mb-8">Lightmodul Konfigurator</p>
 
         {/* E-Mail */}
         <label className="block text-[11px] font-medium text-[#7A7670] uppercase tracking-widest mb-1.5">E-Mail</label>

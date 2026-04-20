@@ -37,7 +37,7 @@ export default function AdminLoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-[#F8F6F2]">
       <form onSubmit={(e) => { void handleSubmit(e); }} className="w-full max-w-sm bg-white rounded-xl shadow-lg p-8">
         <h1 className="text-lg font-semibold text-[#1C1A17] mb-1">Admin-Zugang</h1>
-        <p className="text-xs text-[#7A7670] mb-6">Artmodul Konfigurator</p>
+        <p className="text-xs text-[#7A7670] mb-6">Lightmodul Konfigurator</p>
 
         <label className="block text-xs font-medium text-[#3A3834] mb-1">Benutzer</label>
         <input

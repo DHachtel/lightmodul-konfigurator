@@ -1,5 +1,5 @@
 // @ts-nocheck
-// TODO: Für Lightmodul neu schreiben — noch Artmodul-Layout
+// TODO: Für Lightmodul neu schreiben — noch Lightmodul-Layout
 import React from 'react';
 import {
   Document,
@@ -346,9 +346,9 @@ export function OfferDocument({ config, pricing, bom }: OfferDocumentProps) {
 
   return (
     <Document
-      title="Artmodul Angebot"
+      title="Lightmodul Angebot"
       author="MHZ Hachtel GmbH"
-      creator="Artmodul Konfigurator"
+      creator="Lightmodul Konfigurator"
     >
       <Page size="A4" style={S.page}>
 
@@ -360,7 +360,7 @@ export function OfferDocument({ config, pricing, bom }: OfferDocumentProps) {
           <View style={S.headerRight}>
             <Text style={S.docTitle}>Angebot</Text>
             <Text style={S.docMeta}>
-              Artmodul · MHZ Hachtel GmbH{'\n'}
+              Lightmodul · MHZ Hachtel GmbH{'\n'}
               {fmtDate()}
             </Text>
           </View>
@@ -465,7 +465,7 @@ export function OfferDocument({ config, pricing, bom }: OfferDocumentProps) {
 
         {/* ── Footer ── */}
         <View style={S.pageFooter} fixed>
-          <Text style={S.footerText}>MHZ Hachtel GmbH · Artmodul Konfigurator</Text>
+          <Text style={S.footerText}>MHZ Hachtel GmbH · Lightmodul Konfigurator</Text>
           <Text
             style={S.footerText}
             render={({ pageNumber, totalPages }) =>

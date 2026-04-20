@@ -5,10 +5,6 @@ import type { CellTypeOption, Footer, Material } from './types';
 /** Lightmodul hat ein einziges, fixes Elementmaß: 600 × 600 × 600 mm */
 export const ELEMENT_SIZE_MM = 600;
 
-/** @deprecated Kompatibilitätsexport — Lightmodul hat festes Rastermaß */
-export const WIDTHS  = [ELEMENT_SIZE_MM];
-export const HEIGHTS = [ELEMENT_SIZE_MM];
-
 // ─── Grid-Grenzen ────────────────────────────────────────────────────────────
 
 /** Maximale Anzahl Elemente pro Achse */
@@ -27,6 +23,13 @@ export const PROFILE_SIZE_MM = 25;
 
 /** Alu-Würfel-Kantenlänge 27 mm */
 export const CUBE_SIZE_MM = 27;
+
+// ─── Hardware-Mengen pro Alu-Würfel (Montagereferenz) ────────────────────────
+
+export const HW_M4_PER_CUBE = 4;
+export const HW_MUTTERN_PER_CUBE = 4;
+export const HW_M6_PER_CUBE = 2;
+export const HW_SCHEIBEN_PER_CUBE = 2;
 
 // ─── Profilfarben ─────────────────────────────────────────────────────────────
 
@@ -67,45 +70,10 @@ export const FOOTERS: Footer[] = [
 export const FOOTER_BY_V: Record<string, Footer> =
   Object.fromEntries(FOOTERS.map(f => [f.v, f]));
 
-// ─── Einlegerahmen-Produktgruppen ────────────────────────────────────────────
-
-/**
- * Jede Produktgruppe steht für eine MHZ-Produktkategorie
- * (z.B. Rollladen, Raffstore, Insektenschutz…).
- * Im Konfigurator wählt der Händler pro Zelle eine Gruppe aus.
- * Artikelnummern und Beschreibungen werden aus Supabase geladen.
- */
-export interface FrameGroup {
-  v: string;  // interner Code
-  l: string;  // Anzeigename
-  /** Farb-Hex für die Darstellung der Rahmengruppe im 3D-Vorschau */
-  hex: string;
-}
-
-export const FRAME_GROUPS: FrameGroup[] = [
-  { v: 'RO',  l: 'Rollladen',       hex: '#7090b0' },
-  { v: 'RA',  l: 'Raffstore',        hex: '#b08040' },
-  { v: 'IS',  l: 'Insektenschutz',   hex: '#60a060' },
-  { v: 'SS',  l: 'Sichtschutz',      hex: '#a06090' },
-  { v: 'SO',  l: 'Sonnenschutz',     hex: '#c0a040' },
-  { v: 'PL',  l: 'Plissee',          hex: '#7080a0' },
-  { v: 'FP',  l: 'Flächenvorhang',   hex: '#8090c0' },
-  { v: 'DU',  l: 'Duette',           hex: '#7088b8' },
-];
-
-export const FRAME_GROUP_BY_V: Record<string, FrameGroup> =
-  Object.fromEntries(FRAME_GROUPS.map(g => [g.v, g]));
-
 // ─── Zubehör / Komponenten ───────────────────────────────────────────────────
 
 /** Fachboden 600×600 mm */
 export const SHELF_ART_NR = '6964';
-
-/** Wandhalterung */
-export const WALL_MOUNT_ART_NR = '9200';
-
-/** Kabelkanal / Stromzugangspunkt */
-export const CABLE_DUCT_ART_NR = '9300';
 
 // ─── Preisgruppen-Darstellung ─────────────────────────────────────────────────
 
@@ -114,19 +82,3 @@ export const PG_DOT: Record<string, string> = {
   PG1: '#4a7a9b',
   '—': 'transparent',
 };
-
-// ─── Für Kompatibilität mit generischen Komponenten ──────────────────────────
-
-/**
- * Dummy MATERIALS-Export, damit generische Komponenten (BOMPanel, Sidebar)
- * die Profilfarben als "Materialauswahl" behandeln können.
- */
-export const MATERIALS: Material[] = PROFILE_COLORS;
-export const MAT_BY_V: Record<string, Material> = PROFILE_COLOR_BY_V;
-
-/** Kein Griff-System bei Lightmodul */
-export const HANDLES: { v: string; l: string; lb: number | null }[] = [];
-export const HANDLE_BY_V: Record<string, { v: string; l: string; lb: number | null }> = {};
-
-/** Kein Kabeldurchlass-Bohrungssystem (anders als Artmodul) */
-export const CABLE_HOLE_ART_NR = '';

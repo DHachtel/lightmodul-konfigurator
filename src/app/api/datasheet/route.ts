@@ -57,7 +57,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const ts = new Date().toLocaleDateString('de-DE').replace(/\./g, '-');
-  const filename = `Artmodul_Datenblatt_${ts}.pdf`;
+  const filename = `Lightmodul_Datenblatt_${ts}.pdf`;
 
   return new NextResponse(new Uint8Array(buffer), {
     status: 200,

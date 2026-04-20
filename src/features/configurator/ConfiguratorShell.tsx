@@ -12,7 +12,6 @@ import { useConfigStore } from './useConfigStore';
 import { useDrillDown } from '@/features/preview3d/useDrillDown';
 import { useLivePrice } from '@/features/bom/useLivePrice';
 import { computeBOM } from '@/core/calc';
-import { computeBoardVariants } from '@/core/variants';
 import { MAT_BY_V } from '@/core/constants';
 import { buildBOMRowsExtended, downloadXLSXExtended } from '@/features/bom/exportXLS';
 import type { ThreeCanvasHandle } from '@/features/preview3d/Preview3D';
@@ -73,7 +72,6 @@ function ConfiguratorShellInner() {
   const canSeePrice = true;
 
   const bom = useMemo(() => computeBOM(state), [state]);
-  const boardVariants = useMemo(() => computeBoardVariants(state), [state]);
 
   // ── Oberflächen-Verfügbarkeit (welche PGs sind für die aktuelle Config möglich?) ──
   const [pgAvail, setPgAvail] = useState<Record<string, boolean>>({ pg1: true, pg2: true, pg3: true, pg4: true });
@@ -308,7 +306,7 @@ function ConfiguratorShellInner() {
       exportBom, state.surface, matObj, state.bomOverrides, exportBom.catOverrides, boardVariants,
       pricing?.items ?? null, actions.moebelId !== null ? String(actions.moebelId) : undefined,
     );
-    await downloadXLSXExtended(rows, overrideRows, `Artmodul_Stueckliste_${actions.moebelId !== null ? String(actions.moebelId) : ts}.xlsx`);
+    await downloadXLSXExtended(rows, overrideRows, `Lightmodul_Stueckliste_${actions.moebelId !== null ? String(actions.moebelId) : ts}.xlsx`);
   }, [actions.committedBOM, actions.moebelId, bom, state.surface, state.bomOverrides, boardVariants, pricing]);
 
   // ── Datenblatt-Export ──
@@ -332,7 +330,7 @@ function ConfiguratorShellInner() {
       const ts = new Date().toLocaleDateString('de-DE').replace(/\./g, '-');
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `Artmodul_Datenblatt_${ts}.pdf`;
+      a.download = `Lightmodul_Datenblatt_${ts}.pdf`;
       a.click();
     } catch (e) {
       alert('Fehler: ' + (e instanceof Error ? e.message : String(e)));
@@ -360,7 +358,7 @@ function ConfiguratorShellInner() {
       const ts = new Date().toLocaleDateString('de-DE').replace(/\./g, '-');
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `Artmodul_Angebot_${oc}_${ts}.pdf`;
+      a.download = `Lightmodul_Angebot_${oc}_${ts}.pdf`;
       a.click();
     } catch { alert('Exportfehler'); }
     finally { setOfferLoading(false); }

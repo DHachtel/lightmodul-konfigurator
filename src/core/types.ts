@@ -11,8 +11,6 @@ export type CellType = '' | 'O' | 'RF' | 'RL';
 
 export interface Cell {
   type: CellType;
-  /** Produktgruppen-Code des Einlegerahmens (FRAME_GROUPS[].v), z.B. 'RO', 'IS' */
-  frameGroup: string;
   /** Anzahl Fachböden in dieser Zelle (0–2) */
   shelves: number;
 }
@@ -34,27 +32,6 @@ export interface ConfigOpts {
   footer: boolean;
   /** Fachböden global aktiviert (kann pro Zelle übersteuert werden) */
   shelves: boolean;
-  /** Rückwand (hintere Tiefenebene) */
-  backWall: boolean;
-  // Kompatibilität mit Artmodul-Feldern (für generische Komponenten)
-  outer: boolean;
-  inner: boolean;
-  back: boolean;
-}
-
-/** Individuelles Bauteil-Override (Session-only) */
-export interface BomOverride {
-  material: string;  // Profilfarbe: PROFILE_COLORS[].v
-  color: string;     // Anzeigename
-  kabel?: boolean;   // Kabeldurchlass (für zukünftige Erweiterung)
-}
-
-/** Kategorie-Level Override */
-export interface BomCatOverride {
-  anzahl: number;
-  oberflaeche: string;
-  kabel?: boolean;
-  [key: string]: unknown;
 }
 
 /**
@@ -78,21 +55,6 @@ export interface ConfigState {
   /** Fußtyp-Code: FOOTERS[].v */
   footer: string;
   opts: ConfigOpts;
-  bomOverrides: Record<string, BomOverride>;
-  cableHoles: Record<string, boolean>;
-  catOverrides: Record<string, BomCatOverride>;
-  /** Individuelle Bauteilfarben (visuell, kein BOM-Einfluss) */
-  partColors: Record<string, string>;
-  /** Element-Farben pro Zelle "r_c_d" → hex */
-  cellColors: Record<string, string>;
-
-  // ── Kompatibilitätsfelder für generische Komponenten ──────────────────────
-  /** Alias für profileColor — generische Sidebar erwartet 'surface' */
-  surface: string;
-  /** Kein Griff bei Lightmodul — Leerstring */
-  handle: string;
-  /** Einzelne Tiefe in mm (immer 600 * depthLayers) — für Kompatibilität */
-  depth: number;
 }
 
 // ─── Preissystem ─────────────────────────────────────────────────────────────
@@ -135,13 +97,6 @@ export interface CellTypeOption {
   l: string;
 }
 
-/** Kein Griffsystem bei Lightmodul — Interface bleibt für generische Komponentenkompatibilität */
-export interface Handle {
-  v: string;
-  l: string;
-  lb: number | null;
-}
-
 export interface Footer {
   v: string;
   l: string;
@@ -150,11 +105,11 @@ export interface Footer {
 
 // ─── BOM ─────────────────────────────────────────────────────────────────────
 
-/** Maps a dimension string (z.B. "600") to a quantity */
-export type DimMap = Record<string, number>;
-
 /** Positionsbewusste Board-ID → Metadaten */
-export type BoardMap = Record<string, { kategorie: string; isFront: boolean }>;
+export interface BoardEntry {
+  kategorie: string;
+  isFront: boolean;
+}
 
 /**
  * Ergebnis von computeBOM() für das Lightmodul-System.
@@ -164,17 +119,40 @@ export interface BOMResult {
   // ── Alu-Würfel ─────────────────────────────────────────────────────────────
   wuerfel: number;
 
-  // ── Profile (Längen-Keys in mm) ────────────────────────────────────────────
-  /** Horizontale Profile (Breite) — key immer '600' */
-  pB: DimMap;
-  /** Vertikale Profile (Höhe) — key immer '600' */
-  pH: DimMap;
-  /** Tiefenprofile (Z-Richtung) — key immer '600' */
-  pT: DimMap;
-  pBt: number;
-  pHt: number;
-  pTt: number;
-  pGes: number;
+  // ── Profile (Stückzahlen) ─────────────────────────────────────────────────
+  /** Horizontale Profile (Breite) */
+  profileX: number;
+  /** Vertikale Profile (Höhe) */
+  profileY: number;
+  /** Tiefenprofile (Z-Richtung) */
+  profileZ: number;
+  /** Gesamt Profile */
+  profileTotal: number;
+
+  // ── Einlegerahmen ─────────────────────────────────────────────────────────
+  /** Standard-Einlegerahmen (Typ RF) */
+  framesStd: number;
+  /** Beleuchtete Einlegerahmen (Typ RL) */
+  framesLit: number;
+  /** Gesamt Einlegerahmen */
+  framesTotal: number;
+
+  // ── Fachböden ─────────────────────────────────────────────────────────────
+  shelves: number;
+
+  // ── Stellfüße ─────────────────────────────────────────────────────────────
+  footerQty: number;
+  footer: string;
+
+  // ── Hardware (Verbindungsmittel) ───────────────────────────────────────────
+  /** Senkschrauben M4×8 für Würfel-Adapter */
+  schraubenM4: number;
+  /** Zylinderschrauben M6×40 für Verbindungen */
+  schraubenM6: number;
+  /** U-Scheiben D6,4 */
+  scheiben: number;
+  /** Einlegemuttern für Würfel-Adapter */
+  einlegemuttern: number;
 
   // ── Aktive Bounding-Box ────────────────────────────────────────────────────
   /** Anzahl aktive Spalten */
@@ -190,88 +168,9 @@ export interface BOMResult {
   /** Gesamttiefe mm */
   totalDepth: number;
 
-  // ── Einlegerahmen ─────────────────────────────────────────────────────────
-  /** Standard-Einlegerahmen pro Produktgruppe — key: FRAME_GROUPS[].v */
-  framesStd: Record<string, number>;
-  framesStdTotal: number;
-  /** Beleuchtete Einlegerahmen pro Produktgruppe */
-  framesLit: Record<string, number>;
-  framesLitTotal: number;
-  framesGes: number;
-
-  // ── Fachböden ─────────────────────────────────────────────────────────────
-  fbMap: DimMap;
-  fbT: number;
-
-  // ── Stellfüße ─────────────────────────────────────────────────────────────
-  footerQty: number;
-  footer: string;
-  footerObj: Footer | Record<string, never>;
-
-  // ── Hardware (Verbindungsmittel) ───────────────────────────────────────────
-  /** Senkschrauben M4×8 für Würfel-Adapter */
-  schraubenM4: number;
-  /** Zylinderschrauben M6×40 für Verbindungen */
-  schraubenM6: number;
-  /** U-Scheiben D6,4 */
-  scheiben: number;
-  /** Einlegemuttern für Würfel-Adapter */
-  einlegemuttern: number;
-  beschlGes: number;
-
-  // ── Profil-Stoppfen ────────────────────────────────────────────────────────
-  stoppfen: number;
-
   // ── Positionsbewusste Board-IDs ────────────────────────────────────────────
-  boardMap: BoardMap;
-
-  // ── Kategorie-Overrides (durchgereicht) ───────────────────────────────────
-  catOverrides: Record<string, BomCatOverride>;
-  partColors: Record<string, string>;
-  colorSplits: Record<string, number>;
+  boardMap: Record<string, BoardEntry>;
 
   // ── Validierungswarnungen ─────────────────────────────────────────────────
-  warns: string[];
-
-  // ── Kompatibilitätsfelder für generische Artmodul-Komponenten ────────────
-  /** Alias für framesGes (generische BOMPanel erwartet frontGes) */
-  frontGes: number;
-  cableHolesQty: number;
-  bomKabelQty: number;
-  handle: string;
-  handleObj: Handle | Record<string, never>;
-  D: number;
-  activeCols: number[];
-  activeRows: number[];
-  Bact: number;
-  Hact: number;
-  // Artmodul-spezifische Felder werden leer gehalten
-  bStd: DimMap;
-  bKl: DimMap;
-  bStdT: number;
-  bKlT: number;
-  rMap: DimMap;
-  rT: number;
-  sAMap: DimMap;
-  sAT: number;
-  sAMapSY32: DimMap;
-  sATsy: number;
-  sIMap: DimMap;
-  sIT: number;
-  sIMapSY32: DimMap;
-  sITsy: number;
-  plattenGes: number;
-  fMap: Record<string, DimMap>;
-  nK: number;
-  nS: number;
-  nTR: number;
-  nTL: number;
-  nDT: number;
-  totalSch: number;
-  bolzen: number;
-  klemm: number;
-  scharn: number;
-  kHalt: number;
-  kDaem: number;
-  schubF: number;
+  warnings: string[];
 }

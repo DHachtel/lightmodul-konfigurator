@@ -1,55 +1,28 @@
 import { z } from 'zod';
 import { MAX_COLS, MAX_ROWS, MAX_DEPTH, ELEMENT_SIZE_MM } from '@/core/constants';
 
-// ─── Kompatibilitätskonstanten ────────────────────────────────────────────────
-/** @deprecated Lightmodul hat festes Rastermaß — nur für Kompatibilität */
-export const WIDTHS  = [ELEMENT_SIZE_MM];
-export const HEIGHTS = [ELEMENT_SIZE_MM];
-
 // ─── Cell & Grid Schemas ─────────────────────────────────────────────────────
 
 export const CellTypeSchema = z.enum(['', 'O', 'RF', 'RL']);
 
 export const CellSchema = z.object({
-  type:       CellTypeSchema,
-  frameGroup: z.string().optional().default(''),
-  shelves:    z.number().int().min(0).max(2).optional().default(0),
+  type:    CellTypeSchema,
+  shelves: z.number().int().min(0).max(2).optional().default(0),
 });
 
 // ─── ConfigState Schema ──────────────────────────────────────────────────────
 
 export const ConfigStateSchema = z.object({
-  cols:        z.array(z.literal(ELEMENT_SIZE_MM)).min(1).max(MAX_COLS),
-  rows:        z.array(z.literal(ELEMENT_SIZE_MM)).min(1).max(MAX_ROWS),
-  depthLayers: z.number().int().min(1).max(MAX_DEPTH),
-  grid:        z.array(z.array(z.array(CellSchema))),
+  cols:         z.array(z.literal(ELEMENT_SIZE_MM)).min(1).max(MAX_COLS),
+  rows:         z.array(z.literal(ELEMENT_SIZE_MM)).min(1).max(MAX_ROWS),
+  depthLayers:  z.number().int().min(1).max(MAX_DEPTH),
+  grid:         z.array(z.array(z.array(CellSchema))),
   profileColor: z.string(),
-  footer:      z.string(),
+  footer:       z.string(),
   opts: z.object({
-    footer:   z.boolean().optional().default(true),
-    shelves:  z.boolean().optional().default(false),
-    backWall: z.boolean().optional().default(false),
-    outer:    z.boolean().optional().default(false),
-    inner:    z.boolean().optional().default(false),
-    back:     z.boolean().optional().default(false),
+    footer:  z.boolean().optional().default(true),
+    shelves: z.boolean().optional().default(false),
   }),
-  bomOverrides: z.record(z.string(), z.object({
-    material: z.string(),
-    color:    z.string(),
-    kabel:    z.boolean().optional(),
-  })).optional().default({}),
-  cableHoles:  z.record(z.string(), z.boolean()).optional().default({}),
-  catOverrides: z.record(z.string(), z.object({
-    anzahl:      z.number().int().min(0),
-    oberflaeche: z.string(),
-    kabel:       z.boolean().optional(),
-  }).passthrough()).optional().default({}),
-  partColors: z.record(z.string(), z.string()).optional().default({}),
-  cellColors:  z.record(z.string(), z.string()).optional().default({}),
-  // Kompatibilitätsfelder
-  surface: z.string().optional().default(''),
-  handle:  z.string().optional().default(''),
-  depth:   z.number().optional().default(ELEMENT_SIZE_MM),
 });
 
 // ─── Request Schemas ─────────────────────────────────────────────────────────

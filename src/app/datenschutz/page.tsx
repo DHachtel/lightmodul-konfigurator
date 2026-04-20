@@ -1,12 +1,12 @@
 export const metadata = {
-  title: 'Datenschutzerklärung — Artmodul Konfigurator',
+  title: 'Datenschutzerklärung — Lightmodul Konfigurator',
 };
 
 export default function DatenschutzPage() {
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px', fontFamily: '-apple-system, Arial, sans-serif', color: '#1C1A17', lineHeight: 1.7 }}>
       <h1 style={{ fontSize: 24, fontWeight: 600, marginBottom: 24 }}>Datenschutzerklärung</h1>
-      <p style={{ fontSize: 13, color: '#7A7670', marginBottom: 32 }}>Artmodul Konfigurator — MHZ Hachtel GmbH</p>
+      <p style={{ fontSize: 13, color: '#7A7670', marginBottom: 32 }}>Lightmodul Konfigurator — MHZ Hachtel GmbH</p>
 
       <Section title="1. Verantwortlicher">
         <p>MHZ Hachtel GmbH<br />
@@ -16,7 +16,7 @@ export default function DatenschutzPage() {
       </Section>
 
       <Section title="2. Zweck der Datenverarbeitung">
-        <p>Wir verarbeiten Ihre personenbezogenen Daten ausschließlich zur Bearbeitung Ihrer Anfrage über den Artmodul Konfigurator. Dies umfasst:</p>
+        <p>Wir verarbeiten Ihre personenbezogenen Daten ausschließlich zur Bearbeitung Ihrer Anfrage über den Lightmodul Konfigurator. Dies umfasst:</p>
         <ul>
           <li>Entgegennahme und Speicherung Ihrer Kontaktdaten und Möbelkonfiguration</li>
           <li>Zusendung einer Bestätigungs-E-Mail</li>
@@ -59,7 +59,7 @@ export default function DatenschutzPage() {
       </Section>
 
       <Section title="8. Cookies und Tracking">
-        <p>Der Artmodul Konfigurator verwendet keine Tracking-Cookies und keine Analyse-Tools. Es werden ausschließlich technisch notwendige Cookies verwendet:</p>
+        <p>Der Lightmodul Konfigurator verwendet keine Tracking-Cookies und keine Analyse-Tools. Es werden ausschließlich technisch notwendige Cookies verwendet:</p>
         <ul>
           <li><strong>Supabase Auth Session (sb-*)</strong> — Authentifizierung (Session-Management nach Login)</li>
           <li><strong>Admin-Session (admin_session)</strong> — Zugang zum internen Admin-Bereich</li>

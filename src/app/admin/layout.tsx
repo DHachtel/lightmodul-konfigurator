@@ -30,7 +30,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       {/* Sidebar */}
       <aside className="w-56 bg-[#1C1A17] text-white flex flex-col flex-shrink-0">
         <div className="p-5 border-b border-white/10">
-          <div className="text-xs tracking-widest text-[#C4AE8C] uppercase">Artmodul</div>
+          <div className="text-xs tracking-widest text-[#C4AE8C] uppercase">Lightmodul</div>
           <div className="text-sm font-semibold mt-0.5">Admin</div>
         </div>
         <nav className="flex-1 py-3">

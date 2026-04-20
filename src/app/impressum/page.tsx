@@ -1,5 +1,5 @@
 export const metadata = {
-  title: 'Impressum — Artmodul Konfigurator',
+  title: 'Impressum — Lightmodul Konfigurator',
 };
 
 export default function ImpressumPage() {

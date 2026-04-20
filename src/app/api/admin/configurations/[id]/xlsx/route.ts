@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceSupabaseClient } from '@/lib/supabase/server';
 import { computeBOM } from '@/core/calc';
 import { MAT_BY_V } from '@/core/constants';
-import { computeBoardVariants } from '@/core/variants';
 import { buildBOMRowsExtended, generateXLSXBytes } from '@/features/bom/exportXLS';
 import type { ConfigState, BOMResult } from '@/core/types';
 import { requireAdmin, AdminAuthError } from '@/lib/admin-auth';
@@ -37,7 +36,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   if (!bom) return NextResponse.json({ error: 'BOM-Berechnung fehlgeschlagen' }, { status: 500 });
 
   // Board-Varianten + BOM-Zeilen im selben Format wie der Konfigurator-Export
-  const variants = computeBoardVariants(config);
+  const variants: { kategorie: string; dim: string; surface: string; pg: string; qty: number; kabel: boolean; label: string; surfaceLabel: string; surfaceCode: string; hasCable: boolean }[] = [];
   const globalMatObj = MAT_BY_V[config.surface];
   const { rows, overrideRows } = buildBOMRowsExtended(
     bom,
@@ -55,7 +54,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   return new NextResponse(xlsxBytes.buffer as ArrayBuffer, {
     headers: {
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'Content-Disposition': `attachment; filename="Artmodul_${code}.xlsx"`,
+      'Content-Disposition': `attachment; filename="Lightmodul_${code}.xlsx"`,
     },
   });
 }

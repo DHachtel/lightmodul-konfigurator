@@ -26,17 +26,17 @@ export function customerConfirmationHtml(data: OrderMailData): { subject: string
   const address = esc([data.customerStreet, [data.customerZip, data.customerCity].filter(Boolean).join(' ')].filter(Boolean).join(', '));
 
   return {
-    subject: `Ihre Anfrage ${esc(data.orderNr)} — Artmodul Konfigurator`,
+    subject: `Ihre Anfrage ${esc(data.orderNr)} — Lightmodul Konfigurator`,
     html: `
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
 <body style="font-family: -apple-system, Arial, sans-serif; color: #1C1A17; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 24px;">
-  <h2 style="font-size: 18px; margin-bottom: 4px;">Artmodul Konfigurator</h2>
+  <h2 style="font-size: 18px; margin-bottom: 4px;">Lightmodul Konfigurator</h2>
   <p style="color: #7A7670; font-size: 13px; margin-top: 0;">Ihre Anfrage wurde erfolgreich übermittelt.</p>
   <hr style="border: none; border-top: 1px solid #EEEBE4; margin: 20px 0;">
 
   <p>Guten Tag ${esc(data.customerName)},</p>
-  <p>vielen Dank für Ihre Anfrage über den Artmodul Konfigurator.</p>
+  <p>vielen Dank für Ihre Anfrage über den Lightmodul Konfigurator.</p>
 
   <table style="font-size: 14px; border-collapse: collapse; width: 100%; margin: 16px 0;">
     <tr><td style="padding: 6px 12px 6px 0; color: #7A7670; white-space: nowrap;">Auftragsnummer</td><td style="padding: 6px 0; font-weight: 600;">${esc(data.orderNr)}</td></tr>
@@ -51,7 +51,7 @@ export function customerConfirmationHtml(data: OrderMailData): { subject: string
   <hr style="border: none; border-top: 1px solid #EEEBE4; margin: 20px 0;">
   <p style="font-size: 12px; color: #7A7670;">
     Mit freundlichen Grüßen<br>
-    Ihr Artmodul-Team<br><br>
+    Ihr Lightmodul-Team<br><br>
     MHZ Hachtel GmbH<br>
     info@artmodul.com
   </p>

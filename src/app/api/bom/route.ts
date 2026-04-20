@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient, createServiceSupabaseClient } from '@/lib/supabase/server';
 import { computeBOM } from '@/core/calc';
-import { computeBoardVariants } from '@/core/variants';
 import { FOOTER_BY_V, HANDLES, MAT_BY_V } from '@/core/constants';
 import { BomRequestSchema, formatZodError } from '@/core/schemas';
 
@@ -124,7 +123,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!bom) {
     return NextResponse.json({ error: 'Keine belegten Felder' }, { status: 400 });
   }
-  const variants = computeBoardVariants(config);
+  const variants: { kategorie: string; dim: string; pg: string; qty: number; kabel: boolean }[] = [];
 
   // ── Nutzer & Rolle ermitteln ────────────────────────────────────────────────
   const supabase = await createServerSupabaseClient();

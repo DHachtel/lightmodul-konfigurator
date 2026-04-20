@@ -53,7 +53,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const buffer = await renderToBuffer(element as Parameters<typeof renderToBuffer>[0]);
 
   const ts = new Date().toLocaleDateString('de-DE').replace(/\./g, '-');
-  const filename = `Artmodul_Angebot_${ts}.pdf`;
+  const filename = `Lightmodul_Angebot_${ts}.pdf`;
 
   return new NextResponse(new Uint8Array(buffer), {
     status: 200,

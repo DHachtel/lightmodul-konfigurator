@@ -9,7 +9,7 @@ export interface SceneObject {
   partType:
     | 'profil' | 'wuerfel' | 'front' | 'fachboden'
     | 'stellfuss' | 'rolle'
-    // Artmodul-Kompatibilitäts-Typen (nicht genutzt, aber Interface bleibt stabil)
+    // Lightmodul-Kompatibilitäts-Typen (nicht genutzt, aber Interface bleibt stabil)
     | 'seite_l' | 'seite_r' | 'boden' | 'deckel' | 'ruecken'
     | 'zwischenboden' | 'zwischenwand' | 'eckverbinder' | 'handle';
   position: [number, number, number]; // Three.js-Einheiten (1mm = 0.01)

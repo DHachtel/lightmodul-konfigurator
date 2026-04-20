@@ -376,7 +376,7 @@ export default function ARViewer() {
       <div style={containerStyle}>
         <div style={cardStyle}>
           <div style={{ fontSize: 16, fontWeight: 600, color: '#1C1A17', marginBottom: 8 }}>
-            Artmodul AR
+            Lightmodul AR
           </div>
           <div style={{ fontSize: 13, color: '#7A7670' }}>
             {state === 'loading' ? 'Lade Konfiguration…' : '3D-Modell wird erstellt…'}

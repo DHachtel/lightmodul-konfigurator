@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { createServiceSupabaseClient } from '@/lib/supabase/server';
 import { computeBOM } from '@/core/calc';
-import { computeBoardVariants } from '@/core/variants';
 import { MultiOfferDocument } from '@/features/pdf/MultiOfferDocument';
 import type { OfferItem } from '@/features/pdf/MultiOfferDocument';
 import type { ConfigState } from '@/core/types';
@@ -120,8 +119,8 @@ function computeNetPrice(
     add(lookup(priceMap, 'Profil', Number(len)), qty, false);
   }
 
-  // Platten + Fronten — per Variante
-  const variants = computeBoardVariants(config);
+  // Platten + Fronten — per Variante (Lightmodul: keine Board-Varianten)
+  const variants: { dim: string; kategorie: string; pg: string; qty: number }[] = [];
   for (const v of variants) {
     const [b, t] = parseDim(v.dim);
     const row = lookup(priceMap, v.kategorie, b, t);
@@ -298,7 +297,7 @@ export async function POST(req: NextRequest) {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="Artmodul_Angebot_${offerCode}_${ts}.pdf"`,
+        'Content-Disposition': `attachment; filename="Lightmodul_Angebot_${offerCode}_${ts}.pdf"`,
         'X-Offer-Code': String(offerCode),
       },
     });

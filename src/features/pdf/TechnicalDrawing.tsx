@@ -1,5 +1,5 @@
 // @ts-nocheck
-// TODO: Für Lightmodul neu schreiben — noch Artmodul-Layout
+// TODO: Für Lightmodul neu schreiben — noch Lightmodul-Layout
 import React from 'react';
 import { Svg, Rect, Line, Path, Circle, Text as SvgText, G } from '@react-pdf/renderer';
 import type { ConfigState, CellType } from '@/core/types';

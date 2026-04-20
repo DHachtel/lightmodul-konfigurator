@@ -11,7 +11,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceSupabaseClient } from '@/lib/supabase/server';
 import { computeBOM } from '@/core/calc';
-import { computeBoardVariants } from '@/core/variants';
 import { BomRequestSchema, formatZodError } from '@/core/schemas';
 
 // ── DB-Typen ──────────────────────────────────────────────────────────────────
@@ -96,7 +95,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // Keine belegten Felder → alle PGs verfügbar
     return NextResponse.json({ pg1: true, pg2: true, pg3: true, pg4: true });
   }
-  const variants = computeBoardVariants(config);
+  const variants: { kategorie: string; dim: string; pg: string; qty: number }[] = [];
 
   // Preise laden (service role)
   const sb = createServiceSupabaseClient();

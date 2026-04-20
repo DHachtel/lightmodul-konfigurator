@@ -1,5 +1,8 @@
-import type { BOMResult, BomCatOverride, Cell, ConfigState, DimMap, Footer } from './types';
-import { ELEMENT_SIZE_MM, FOOTER_BY_V } from './constants';
+import type { BOMResult, Cell, CellType, ConfigState } from './types';
+
+/** Dimensionsmap: Schlüssel = Maßbezeichnung, Wert = Menge */
+type DimMap = Record<string, number>;
+import { ELEMENT_SIZE_MM, HW_M4_PER_CUBE, HW_MUTTERN_PER_CUBE, HW_M6_PER_CUBE, HW_SCHEIBEN_PER_CUBE } from './constants';
 
 // ─── Hilfsfunktionen ──────────────────────────────────────────────────────────
 
@@ -35,7 +38,7 @@ function isActive(cell: Cell): boolean {
  *   Ein Knoten ist aktiv wenn mindestens eine angrenzende Zelle aktiv ist.
  */
 export function computeBOM(config: ConfigState): BOMResult | null {
-  const { cols, rows, depthLayers, grid, footer, opts, catOverrides, partColors } = config;
+  const { cols, rows, depthLayers, grid, footer, opts } = config;
   const nC = cols.length;
   const nR = rows.length;
   const nD = depthLayers;
@@ -45,17 +48,11 @@ export function computeBOM(config: ConfigState): BOMResult | null {
   for (let r = 0; r < nR && !hasActive; r++)
     for (let c = 0; c < nC && !hasActive; c++)
       for (let d = 0; d < nD && !hasActive; d++)
-        if (isActive(grid[r]?.[c]?.[d] ?? { type: '', frameGroup: '', shelves: 0 })) hasActive = true;
+        if (isActive(grid[r]?.[c]?.[d] ?? { type: '' as CellType, shelves: 0 })) hasActive = true;
 
   if (!hasActive) return null;
 
   // ── Würfel-Knoten-Matrix aufbauen ─────────────────────────────────────────
-  //
-  // Ein Knoten (rk, ck, dk) ist aktiv wenn mindestens eine der bis zu 8
-  // angrenzenden Zellen aktiv ist.
-  // Knoten-Koordinaten: rk ∈ [0..nR], ck ∈ [0..nC], dk ∈ [0..nD]
-  // Zelle (r,c,d) liegt zwischen Knoten (r,c,d) und (r+1,c+1,d+1)
-
   const nodeActive = (rk: number, ck: number, dk: number): boolean => {
     const rMin = Math.max(0, rk - 1);
     const rMax = Math.min(nR - 1, rk);
@@ -66,7 +63,7 @@ export function computeBOM(config: ConfigState): BOMResult | null {
     for (let r = rMin; r <= rMax; r++)
       for (let c = cMin; c <= cMax; c++)
         for (let d = dMin; d <= dMax; d++)
-          if (isActive(grid[r]?.[c]?.[d] ?? { type: '', frameGroup: '', shelves: 0 })) return true;
+          if (isActive(grid[r]?.[c]?.[d] ?? { type: '' as CellType, shelves: 0 })) return true;
     return false;
   };
 
@@ -78,7 +75,7 @@ export function computeBOM(config: ConfigState): BOMResult | null {
         if (nodeActive(rk, ck, dk)) wuerfel++;
 
   // ── Profile zählen ────────────────────────────────────────────────────────
-  const S = ELEMENT_SIZE_MM; // 600mm
+  const S = ELEMENT_SIZE_MM;
   const pB: DimMap = {};  // horizontal (X/Breite)
   const pH: DimMap = {};  // vertikal (Y/Höhe)
   const pT: DimMap = {};  // Tiefe (Z)
@@ -104,83 +101,56 @@ export function computeBOM(config: ConfigState): BOMResult | null {
         if (nodeActive(rk, ck, dk) && nodeActive(rk, ck, dk + 1))
           addDim(pT, String(S), 1);
 
-  const pBt = sumMap(pB);
-  const pHt = sumMap(pH);
-  const pTt = sumMap(pT);
-  const pGes = pBt + pHt + pTt;
-
-  // ── Stoppfen (Profilenden-Stopfen) ────────────────────────────────────────
-  // Vereinfachte Näherung: 4 Stopfen pro Würfel an den Außenkanten
-  // Exaktere Berechnung: Anzahl Profilenden ohne Nachbar-Würfel
-  const stoppfen = wuerfel * 4;
+  const profileX = sumMap(pB);
+  const profileY = sumMap(pH);
+  const profileZ = sumMap(pT);
+  const profileTotal = profileX + profileY + profileZ;
 
   // ── Einlegerahmen ─────────────────────────────────────────────────────────
-  const framesStd: Record<string, number> = {};
-  const framesLit: Record<string, number> = {};
-  let framesStdTotal = 0;
-  let framesLitTotal = 0;
-
-  for (let r = 0; r < nR; r++) {
-    for (let c = 0; c < nC; c++) {
-      for (let d = 0; d < nD; d++) {
-        const cell = grid[r]?.[c]?.[d] ?? { type: '', frameGroup: '', shelves: 0 };
-        if (cell.type === 'RF') {
-          const grp = cell.frameGroup || 'XX';
-          framesStd[grp] = (framesStd[grp] ?? 0) + 1;
-          framesStdTotal++;
-        } else if (cell.type === 'RL') {
-          const grp = cell.frameGroup || 'XX';
-          framesLit[grp] = (framesLit[grp] ?? 0) + 1;
-          framesLitTotal++;
-        }
-      }
-    }
-  }
-
-  const framesGes = framesStdTotal + framesLitTotal;
-
-  // ── Fachböden ──────────────────────────────────────────────────────────────
-  const fbMap: DimMap = {};
-  let fbT = 0;
+  let framesStd = 0;
+  let framesLit = 0;
 
   for (let r = 0; r < nR; r++)
     for (let c = 0; c < nC; c++)
       for (let d = 0; d < nD; d++) {
-        const cell = grid[r]?.[c]?.[d] ?? { type: '', frameGroup: '', shelves: 0 };
+        const cell = grid[r]?.[c]?.[d] ?? { type: '' as CellType, shelves: 0 };
+        if (cell.type === 'RF') framesStd++;
+        else if (cell.type === 'RL') framesLit++;
+      }
+
+  const framesTotal = framesStd + framesLit;
+
+  // ── Fachböden ──────────────────────────────────────────────────────────────
+  let shelves = 0;
+  for (let r = 0; r < nR; r++)
+    for (let c = 0; c < nC; c++)
+      for (let d = 0; d < nD; d++) {
+        const cell = grid[r]?.[c]?.[d] ?? { type: '' as CellType, shelves: 0 };
         if (cell.type !== '' && cell.shelves > 0) {
-          addDim(fbMap, `${S}×${S}`, cell.shelves);
-          fbT += cell.shelves;
+          shelves += cell.shelves;
         }
       }
 
   // ── Stellfüße ─────────────────────────────────────────────────────────────
-  // Anzahl Stellfüße = aktive Knoten an der untersten Reihe (rk = nR)
   let footerQty = 0;
   if (opts.footer !== false) {
     for (let ck = 0; ck <= nC; ck++)
       for (let dk = 0; dk <= nD; dk++)
         if (nodeActive(nR, ck, dk)) footerQty++;
   }
-  const footerObj: Footer | Record<string, never> = FOOTER_BY_V[footer] ?? {};
 
   // ── Verbindungshardware ────────────────────────────────────────────────────
-  // Pro Würfel: Adapter-Kit
-  //   4 × Senkschrauben M4×8 (für Würfel-Adapter-Montage)
-  //   4 × Einlegemuttern für Adapter
-  //   2 × Zylinderschrauben M6×40 (Profilverbindung)
-  //   2 × U-Scheiben D6,4
-  const schraubenM4    = wuerfel * 4;
-  const einlegemuttern = wuerfel * 4;
-  const schraubenM6    = wuerfel * 2;
-  const scheiben       = schraubenM6;
-  const beschlGes      = schraubenM4 + einlegemuttern + schraubenM6 + scheiben;
+  const schraubenM4    = wuerfel * HW_M4_PER_CUBE;
+  const einlegemuttern = wuerfel * HW_MUTTERN_PER_CUBE;
+  const schraubenM6    = wuerfel * HW_M6_PER_CUBE;
+  const scheiben       = wuerfel * HW_SCHEIBEN_PER_CUBE;
 
   // ── Board-Map ─────────────────────────────────────────────────────────────
   const boardMap: BOMResult['boardMap'] = {};
   for (let r = 0; r < nR; r++)
     for (let c = 0; c < nC; c++)
       for (let d = 0; d < nD; d++) {
-        const cell = grid[r]?.[c]?.[d] ?? { type: '', frameGroup: '', shelves: 0 };
+        const cell = grid[r]?.[c]?.[d] ?? { type: '' as CellType, shelves: 0 };
         if (cell.type !== '') {
           boardMap[`frame_r${r}_c${c}_d${d}`] = {
             kategorie: 'einlegerahmen',
@@ -190,49 +160,23 @@ export function computeBOM(config: ConfigState): BOMResult | null {
       }
 
   // ── Validierungswarnungen ─────────────────────────────────────────────────
-  const warns: string[] = [];
-  if (nC > 8) warns.push(`Maximalbreite überschritten (max. 8 Elemente, aktuell ${nC})`);
-  if (nR > 5) warns.push(`Maximalhöhe überschritten (max. 5 Elemente, aktuell ${nR})`);
-  if (nD > 4) warns.push(`Maximale Tiefe überschritten (max. 4 Ebenen, aktuell ${nD})`);
+  const warnings: string[] = [];
+  if (nC > 8) warnings.push(`Maximalbreite überschritten (max. 8 Elemente, aktuell ${nC})`);
+  if (nR > 5) warnings.push(`Maximalhöhe überschritten (max. 5 Elemente, aktuell ${nR})`);
+  if (nD > 4) warnings.push(`Maximale Tiefe überschritten (max. 4 Ebenen, aktuell ${nD})`);
 
   // ── Rückgabe ──────────────────────────────────────────────────────────────
-  const emptyDimMap: DimMap = {};
-  const resolvedCatOverrides: Record<string, BomCatOverride> = catOverrides ?? {};
-
   return {
     wuerfel,
-    pB, pH, pT,
-    pBt, pHt, pTt, pGes,
+    profileX, profileY, profileZ, profileTotal,
+    framesStd, framesLit, framesTotal,
+    shelves,
+    footerQty, footer,
+    schraubenM4, schraubenM6, scheiben, einlegemuttern,
     numCols: nC, numRows: nR, numDepth: nD,
-    totalWidth:  nC * S, totalHeight: nR * S, totalDepth: nD * S,
-    framesStd, framesStdTotal, framesLit, framesLitTotal, framesGes,
-    fbMap, fbT,
-    footerQty, footer, footerObj,
-    schraubenM4, schraubenM6, scheiben, einlegemuttern, beschlGes,
-    stoppfen,
+    totalWidth: nC * S, totalHeight: nR * S, totalDepth: nD * S,
     boardMap,
-    catOverrides: resolvedCatOverrides,
-    partColors:   partColors ?? {},
-    colorSplits:  {},
-    warns,
-    // Kompatibilitäts-Aliases
-    frontGes:      framesGes,
-    cableHolesQty: 0,
-    bomKabelQty:   0,
-    handle:        '',
-    handleObj:     {},
-    D:             nD * S,
-    activeCols:    cols,
-    activeRows:    rows,
-    Bact:          nC * S,
-    Hact:          nR * S,
-    bStd: emptyDimMap, bKl: emptyDimMap, bStdT: 0, bKlT: 0,
-    rMap: emptyDimMap, rT: 0,
-    sAMap: emptyDimMap, sAT: 0, sAMapSY32: emptyDimMap, sATsy: 0,
-    sIMap: emptyDimMap, sIT: 0, sIMapSY32: emptyDimMap, sITsy: 0,
-    plattenGes: 0,
-    fMap: {}, nK: 0, nS: 0, nTR: 0, nTL: 0, nDT: 0, totalSch: 0,
-    bolzen: 0, klemm: 0, scharn: 0, kHalt: 0, kDaem: 0, schubF: 0,
+    warnings,
   };
 }
 
@@ -240,7 +184,7 @@ export function computeBOM(config: ConfigState): BOMResult | null {
 
 /** Erstellt eine leere Zelle */
 export function emptyCell(): Cell {
-  return { type: '', frameGroup: '', shelves: 0 };
+  return { type: '' as CellType, shelves: 0 };
 }
 
 /** Erstellt ein leeres 3D-Grid mit den angegebenen Dimensionen */
