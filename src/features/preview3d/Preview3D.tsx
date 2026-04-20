@@ -703,31 +703,36 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
       r >= 0 && r < nR && c >= 0 && c < nC &&
       (state.grid[r]?.[c]?.some(cell => cell.type !== '') ?? false);
 
-    // Schwerkraft: Position ist nur gültig wenn Element darunter steht
-    // oder es die unterste Zeile (nR-1) ist
-    const hasSupport = (r: number, c: number) =>
-      r === nR - 1 || isActive(r + 1, c);
-
-    // Ein Nachbar (links, rechts oder oben) ist aktiv
-    const hasActiveNeighborLRU = (r: number, c: number) =>
-      isActive(r - 1, c) || isActive(r, c - 1) || isActive(r, c + 1);
-
-    // Zellposition berechnen (identisch zu useModuleGeometry)
+    // Zellposition berechnen (auch für virtuelle Rand-Positionen)
     const cellPos = (r: number, c: number): [number, number, number] => [
       (xBase + (c + 0.5) * ELEMENT_SIZE_MM) * S,
       (yBase + (nR - r - 0.5) * ELEMENT_SIZE_MM) * S,
       zCenter,
     ];
 
-    // 1. Leere Zellen INNERHALB des Grids
-    // Regel: muss Support haben (Element darunter oder Bodenzeile)
-    //        UND mindestens einen aktiven Nachbarn (links, rechts, oben oder unten)
-    for (let r = 0; r < nR; r++) {
-      for (let c = 0; c < nC; c++) {
+    // Einheitliche Logik: Scanbereich = Grid + 1 virtuelle Position an jedem Rand
+    // Bereich: row -1..nR, col -1..nC (aber: unten NICHT, also row nur bis nR-1 extern)
+    const rMin = nR < MAX_ROWS ? -1 : 0;
+    const rMax = nR - 1; // Unten: Bodenniveau, KEINE Erweiterung
+    const cMin = nC < MAX_COLS ? -1 : 0;
+    const cMax = nC < MAX_COLS ? nC : nC - 1;
+
+    for (let r = rMin; r <= rMax; r++) {
+      for (let c = cMin; c <= cMax; c++) {
+        // Position ist aktiv → kein Ghost
         if (isActive(r, c)) continue;
-        if (!hasSupport(r, c)) continue;
+
+        // Schwerkraft: muss Support haben
+        // Bodenzeile des Grids (r === nR-1) hat immer Support
+        // Virtuelle Positionen (r < 0 oder r >= nR) haben Support wenn darunter aktiv
+        const isBottomRow = r === nR - 1;
+        const hasSupportBelow = isActive(r + 1, c);
+        if (!isBottomRow && !hasSupportBelow) continue;
+
         // Mindestens ein aktiver Nachbar (4-connected)
-        if (!isActive(r - 1, c) && !isActive(r + 1, c) && !isActive(r, c - 1) && !isActive(r, c + 1)) continue;
+        if (!isActive(r - 1, c) && !isActive(r + 1, c) &&
+            !isActive(r, c - 1) && !isActive(r, c + 1)) continue;
+
         zones.push({
           row: r, col: c,
           position: cellPos(r, c),
@@ -735,60 +740,6 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
         });
       }
     }
-
-    // 2. Rand-Ghost-Zones (Grid-Erweiterung) — nur einzelne Zellen
-    // Links (col = -1): nur wo Nachbar rechts (col=0) aktiv UND Support gegeben
-    if (nC < MAX_COLS) {
-      for (let r = 0; r < nR; r++) {
-        if (!isActive(r, 0)) continue; // Nachbar rechts muss aktiv sein
-        // Support: unterste Zeile ODER Element darunter links (gibt es noch nicht, aber
-        // unterste Zeile oder der linke Nachbar unten ist auch aktiv)
-        const bottomRow = r === nR - 1;
-        const supportBelow = r + 1 < nR && isActive(r + 1, 0); // Proxy: wenn unten rechts aktiv
-        if (!bottomRow && !supportBelow) continue;
-        zones.push({
-          row: r, col: -1,
-          position: [
-            (xBase - ELEMENT_SIZE_MM / 2) * S,
-            (yBase + (nR - r - 0.5) * ELEMENT_SIZE_MM) * S,
-            zCenter,
-          ],
-          size: [cellSize, cellSize, depthSize],
-        });
-      }
-      // Rechts (col = nC)
-      for (let r = 0; r < nR; r++) {
-        if (!isActive(r, nC - 1)) continue;
-        const bottomRow = r === nR - 1;
-        const supportBelow = r + 1 < nR && isActive(r + 1, nC - 1);
-        if (!bottomRow && !supportBelow) continue;
-        zones.push({
-          row: r, col: nC,
-          position: [
-            (xBase + totalW + ELEMENT_SIZE_MM / 2) * S,
-            (yBase + (nR - r - 0.5) * ELEMENT_SIZE_MM) * S,
-            zCenter,
-          ],
-          size: [cellSize, cellSize, depthSize],
-        });
-      }
-    }
-    // Oben (row = -1): nur wo Element darunter (row=0) aktiv
-    if (nR < MAX_ROWS) {
-      for (let c = 0; c < nC; c++) {
-        if (!isActive(0, c)) continue;
-        zones.push({
-          row: -1, col: c,
-          position: [
-            (xBase + (c + 0.5) * ELEMENT_SIZE_MM) * S,
-            (yBase + (nR + 0.5) * ELEMENT_SIZE_MM) * S,
-            zCenter,
-          ],
-          size: [cellSize, cellSize, depthSize],
-        });
-      }
-    }
-    // Unten: KEINE Ghost-Zonen — unterste Zeile ist Bodenniveau
 
     // Tiefe (Z-Achse): Ghost-Zone hinter dem Möbel für Tiefenerweiterung
     if (nD < 4) { // MAX_DEPTH = 4
