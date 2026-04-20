@@ -595,7 +595,7 @@ interface Preview3DProps {
   /** Ghost Zone: Zelle hinzufuegen (row, col) — fuer interne leere Zellen */
   onGhostClick?: (row: number, col: number) => void;
   /** Grid erweitern und Zelle hinzufuegen (Rand-Ghost-Zones) */
-  onExpandAndAdd?: (direction: 'left' | 'right' | 'top' | 'bottom', atIndex: number) => void;
+  onExpandAndAdd?: (direction: 'left' | 'right' | 'top' | 'bottom' | 'depth', atIndex: number) => void;
   /** Element entfernen (row, col) */
   onRemoveElement?: (row: number, col: number) => void;
   /** Leere Zelle mit 'O' füllen (row, col) */
@@ -770,18 +770,21 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
         });
       }
     }
-    // Unten (row = nR)
-    if (nR < MAX_ROWS) {
-      for (let c = 0; c < nC; c++) {
-        if (!isActive(nR - 1, c)) continue;
+    // Unten: KEINE Ghost-Zonen — unterste Zeile ist Bodenniveau
+
+    // Tiefe (Z-Achse): Ghost-Zone hinter dem Möbel für Tiefenerweiterung
+    if (nD < 4) { // MAX_DEPTH = 4
+      // Eine große Ghost-Zone hinter dem Möbel (gesamte Breite × Höhe)
+      const hasAnyActive = state.grid.some(row => row.some(col => col.some(cell => cell.type !== '')));
+      if (hasAnyActive) {
         zones.push({
-          row: nR, col: c,
+          row: -2, col: -2, // Spezialwert für Tiefenerweiterung
           position: [
-            (xBase + (c + 0.5) * ELEMENT_SIZE_MM) * S,
-            (yBase + (-0.5) * ELEMENT_SIZE_MM) * S,
-            zCenter,
+            (xBase + totalW / 2) * S,
+            (yBase + nR * ELEMENT_SIZE_MM / 2) * S,
+            (zBase + totalD + ELEMENT_SIZE_MM / 2) * S,
           ],
-          size: [cellSize, cellSize, depthSize],
+          size: [totalW * S, nR * ELEMENT_SIZE_MM * S, cellSize],
         });
       }
     }
@@ -794,6 +797,12 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
     const nR = state.rows.length;
     const nC = state.cols.length;
 
+    // Tiefenerweiterung (Spezialwert row=-2, col=-2)
+    if (row === -2 && col === -2) {
+      if (onExpandAndAdd) onExpandAndAdd('depth', 0);
+      return;
+    }
+
     // Interne leere Zelle: direkt mit 'O' fuellen
     if (row >= 0 && row < nR && col >= 0 && col < nC) {
       if (onAddCell) onAddCell(row, col);
@@ -805,7 +814,6 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
     if (col === -1) onExpandAndAdd('left', row);
     else if (col === nC) onExpandAndAdd('right', row);
     else if (row === -1) onExpandAndAdd('top', col);
-    else if (row === nR) onExpandAndAdd('bottom', col);
   }, [state.rows.length, state.cols.length, onAddCell, onExpandAndAdd]);
 
   // ── Remove Buttons: auf allen aktiven Zellen (keine Schwerkraft-Einschraenkung) ──

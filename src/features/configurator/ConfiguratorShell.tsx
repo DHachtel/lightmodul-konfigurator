@@ -93,11 +93,12 @@ function ConfiguratorShellInner() {
   }, [drillActions]);
 
   // Ghost Zone: Grid-Erweiterung bei Rand-Ghost-Zones
-  const handleExpandAndAdd = useCallback((direction: 'left' | 'right' | 'top' | 'bottom', _atIndex: number) => {
+  const handleExpandAndAdd = useCallback((direction: 'left' | 'right' | 'top' | 'bottom' | 'depth', _atIndex: number) => {
     if (direction === 'left') actions.addFilledColLeft();
     else if (direction === 'right') actions.addFilledColRight();
     else if (direction === 'top') actions.addFilledRowTop();
     else if (direction === 'bottom') actions.addFilledRowBottom();
+    else if (direction === 'depth') actions.addDepthFront();
   }, [actions]);
 
   const handleRemoveElement = useCallback((row: number, col: number) => {
