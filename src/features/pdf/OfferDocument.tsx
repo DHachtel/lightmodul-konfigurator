@@ -1,4 +1,3 @@
-// @ts-nocheck
 // TODO: Für Lightmodul neu schreiben — noch Lightmodul-Layout
 import React from 'react';
 import {

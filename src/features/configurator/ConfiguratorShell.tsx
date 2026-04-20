@@ -1,4 +1,3 @@
-// @ts-nocheck — Artmodul-Legacydatei, wird in Phase 1 auf Lightmodul umgebaut
 'use client';
 
 import { useState, useRef, useEffect, useCallback, useMemo, Suspense } from 'react';
@@ -13,7 +12,7 @@ import { useConfigStore } from './useConfigStore';
 import { useDrillDown } from '@/features/preview3d/useDrillDown';
 import { useLivePrice } from '@/features/bom/useLivePrice';
 import { computeBOM } from '@/core/calc';
-import { MAT_BY_V } from '@/core/constants';
+import { ELEMENT_SIZE_MM } from '@/core/constants';
 import { buildBOMRowsExtended, downloadXLSXExtended } from '@/features/bom/exportXLS';
 import type { ThreeCanvasHandle } from '@/features/preview3d/Preview3D';
 import type { ConfigState } from '@/core/types';
@@ -21,6 +20,11 @@ import type { GhostSide } from '@/features/preview3d/GhostZone';
 import SidebarMoebel from './SidebarMoebel';
 import SidebarElement from './SidebarElement';
 import SidebarPlatte from './SidebarPlatte';
+
+/** Gesamttiefe in mm (Rastermaß × Ebenen + Profil-Überhang) */
+function totalDepthMM(state: ConfigState): number {
+  return state.depthLayers * ELEMENT_SIZE_MM + 30;
+}
 import { UserProvider, useUser } from '@/contexts/UserContext';
 import { MarketProvider } from '@/contexts/MarketContext';
 
@@ -74,35 +78,8 @@ function ConfiguratorShellInner() {
 
   const bom = useMemo(() => computeBOM(state), [state]);
 
-  // ── Oberflächen-Verfügbarkeit (welche PGs sind für die aktuelle Config möglich?) ──
-  const [pgAvail, setPgAvail] = useState<Record<string, boolean>>({ pg1: true, pg2: true, pg3: true, pg4: true });
-  const surfaceDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (surfaceDebounce.current) clearTimeout(surfaceDebounce.current);
-    surfaceDebounce.current = setTimeout(async () => {
-      try {
-        const res = await fetch('/api/surfaces', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ config: state }),
-        });
-        if (res.ok) setPgAvail(await res.json() as Record<string, boolean>);
-      } catch { /* Verfügbarkeit im Fehlerfall nicht einschränken */ }
-    }, 400);
-    return () => { if (surfaceDebounce.current) clearTimeout(surfaceDebounce.current); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state]);
-
-  // Oberfläche zurücksetzen wenn die gewählte PG nicht mehr verfügbar ist
-  useEffect(() => {
-    if (state.surface === 'none') return;
-    const matObj = MAT_BY_V[state.surface];
-    if (!matObj) return;
-    const pgKey = matObj.pg.toLowerCase().replace(' ', '');
-    if (pgAvail[pgKey] === false) {
-      actions.setSurface('none');
-    }
-  }, [pgAvail, state.surface, actions]);
+  // pgAvail placeholder — Lightmodul hat keine Oberflächenwahl
+  const pgAvail: Record<string, boolean> = { pg1: true };
 
   // Escape-Taste
   useEffect(() => {

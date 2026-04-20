@@ -1,4 +1,3 @@
-// @ts-nocheck
 // TODO: Preview3D muss für Lightmodul 3D-Grid angepasst werden
 'use client';
 

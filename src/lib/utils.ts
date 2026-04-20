@@ -1,4 +1,3 @@
-// @ts-nocheck — Artmodul-Legacydatei, wird in Phase 1 auf Lightmodul umgebaut
 import type { DimMap } from '@/core/types';
 
 /** Einträge einer DimMap alphabetisch nach Schlüssel sortieren */

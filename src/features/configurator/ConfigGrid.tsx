@@ -1,4 +1,3 @@
-// @ts-nocheck — Artmodul-Legacydatei, wird in Phase 1 auf Lightmodul umgebaut
 'use client';
 
 import React, { useMemo } from 'react';

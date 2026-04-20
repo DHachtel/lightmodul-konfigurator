@@ -1,4 +1,3 @@
-// @ts-nocheck — Artmodul-Legacydatei, wird in Phase 1 auf Lightmodul umgebaut
 /**
  * XLS-Export — Zielformat Muster-Stückliste
  * Spaltenreihenfolge: Materialnr | Möbel ID | Gruppe | Bauteil | Länge | Breite | Anzahl | Oberfläche / Farbe [| Kabel]

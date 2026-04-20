@@ -1,4 +1,3 @@
-// @ts-nocheck — Artmodul-Legacydatei, wird in Phase 1 auf Lightmodul umgebaut
 import { useMemo } from 'react';
 import type { ConfigState } from '@/core/types';
 import { ELEMENT_SIZE_MM, PROFILE_COLOR_BY_V, FRAME_GROUP_BY_V } from '@/core/constants';
