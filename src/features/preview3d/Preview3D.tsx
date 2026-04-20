@@ -832,25 +832,7 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
       }
     }
 
-    // ── 3. TIEFE: einzelne Phantome pro aktiver Zelle hinter dem Möbel ────
-    if (nD < MAX_DEPTH) {
-      for (let r = 0; r < nR; r++) {
-        for (let c = 0; c < nC; c++) {
-          if (!isActive(r, c)) continue;
-          phantoms.push({
-            id: `ph_depth_${r}_${c}`,
-            position: [
-              (xBase + (c + 0.5) * sEl) * S,
-              (yBase + (nR - r - 0.5) * sEl) * S,
-              (zBase + totalD + sEl / 2) * S,
-            ],
-            size: [boxSide, boxSide, boxSide], // 600×600×600 (eine Tiefenebene)
-            targetRow: r, targetCol: c,
-            action: 'depth',
-          });
-        }
-      }
-    }
+    // Tiefe-Erweiterung: vorerst deaktiviert (wird global gesteuert, nicht per Einzelzelle)
 
     return phantoms;
   }, [state.grid, state.cols, state.rows, state.depthLayers]);
@@ -880,19 +862,20 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
     const totalD = nD * ELEMENT_SIZE_MM;
     const xBase = -totalW / 2;
     const yBase = 0;
+    const zBase = -totalD / 2;
 
     for (let r = 0; r < nR; r++) {
       for (let c = 0; c < nC; c++) {
         const isOccupied = state.grid[r]?.[c]?.some(cell => cell.type !== '') ?? false;
         if (!isOccupied) continue;
 
-        // x Button oben-rechts an der Zelle, leicht vor dem Moebel (Z)
+        // × Button auf der Oberseite der Zelle, Mitte, leicht nach vorne
         removes.push({
           row: r, col: c,
           position: [
-            (xBase + (c + 1) * ELEMENT_SIZE_MM) * S,
-            (yBase + (nR - r) * ELEMENT_SIZE_MM) * S,
-            (totalD + 20) * S,
+            (xBase + (c + 0.5) * ELEMENT_SIZE_MM) * S,
+            (yBase + (nR - r) * ELEMENT_SIZE_MM + 15) * S,
+            (zBase - 30) * S,
           ],
         });
       }
@@ -1000,7 +983,12 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
       <directionalLight color="#FFFFFF" intensity={0.08} position={[0, 2, 10]} />
 
       {/* Änderung 3: CameraControls ersetzt OrbitControls — ermöglicht fitToBox */}
-      <CameraControls ref={ccRef} makeDefault />
+      <CameraControls
+        ref={ccRef}
+        makeDefault
+        minPolarAngle={0.1}
+        maxPolarAngle={Math.PI / 2 - 0.05}
+      />
 
       {/* Platten-Meshes: Lack/Holz mit catOverride-Farbreaktivität */}
       <group name="platten">

@@ -268,15 +268,34 @@ export function useConfigStore(): [ConfigState, ConfigActions, () => void] {
       return { ...s, rows: [...s.rows, PAD_ROW_H], grid: [...s.grid, newRow] };
     }),
 
-    // ── Atomar: Grid erweitern + 1 Zelle aktivieren ──────────────────────
+    // ── Atomar: Grid erweitern + Zellen aktivieren ────────────────────────
+    // Links/Rechts: aktiviert alle Zellen in der neuen Spalte die einen
+    //               aktiven Nachbarn in der bestehenden Randspalte haben
+    //               UND Support (Schwerkraft) gegeben ist.
+    // Oben: aktiviert nur die geklickte Spalte (1 Element stapeln).
     expandAndActivateCell: (direction, atIndex) => update(s => {
       const nD = s.depthLayers;
+      const nR = s.grid.length;
+
+      // Hilfsfunktion: ist Zelle (r, c) aktiv?
+      const active = (r: number, c: number) =>
+        r >= 0 && r < nR && c >= 0 && c < s.cols.length &&
+        (s.grid[r]?.[c]?.some(cell => cell.type !== '') ?? false);
+
       if (direction === 'left') {
         if (s.cols.length >= MAX_COLS) return s;
         const cols = [PAD_COL_W, ...s.cols];
+        // Neue Spalte: aktiviere jede Zeile wo col=0 aktiv ist (= Nachbar rechts)
+        // UND Support gegeben (Bodenzeile oder Zeile darunter auch aktiviert wird)
+        // Von unten nach oben aufbauen (Schwerkraft)
+        const shouldActivate: boolean[] = Array(nR).fill(false);
+        for (let r = nR - 1; r >= 0; r--) {
+          if (!active(r, 0)) continue; // kein Nachbar rechts
+          const hasSupport = r === nR - 1 || shouldActivate[r + 1];
+          if (hasSupport) shouldActivate[r] = true;
+        }
         const grid: Grid = s.grid.map((rowArr, ri) => {
-          // Neue leere Spalte vorne einfügen, nur bei atIndex (=row) aktivieren
-          const cell: Cell = ri === atIndex
+          const cell: Cell = shouldActivate[ri]
             ? { type: 'O' as CellType, shelves: 0 }
             : newCell();
           return [Array.from({ length: nD }, () => ({ ...cell })), ...rowArr];
@@ -286,8 +305,15 @@ export function useConfigStore(): [ConfigState, ConfigActions, () => void] {
       if (direction === 'right') {
         if (s.cols.length >= MAX_COLS) return s;
         const cols = [...s.cols, PAD_COL_W];
+        const lastC = s.cols.length - 1;
+        const shouldActivate: boolean[] = Array(nR).fill(false);
+        for (let r = nR - 1; r >= 0; r--) {
+          if (!active(r, lastC)) continue;
+          const hasSupport = r === nR - 1 || shouldActivate[r + 1];
+          if (hasSupport) shouldActivate[r] = true;
+        }
         const grid: Grid = s.grid.map((rowArr, ri) => {
-          const cell: Cell = ri === atIndex
+          const cell: Cell = shouldActivate[ri]
             ? { type: 'O' as CellType, shelves: 0 }
             : newCell();
           return [...rowArr, Array.from({ length: nD }, () => ({ ...cell }))];
@@ -296,6 +322,7 @@ export function useConfigStore(): [ConfigState, ConfigActions, () => void] {
       }
       if (direction === 'top') {
         if (s.rows.length >= MAX_ROWS) return s;
+        // Oben: nur die geklickte Spalte aktivieren (1 Element stapeln)
         const newRow: Cell[][] = Array.from({ length: s.cols.length }, (_, ci) => {
           const cell: Cell = ci === atIndex
             ? { type: 'O' as CellType, shelves: 0 }
