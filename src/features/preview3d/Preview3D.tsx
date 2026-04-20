@@ -852,10 +852,10 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
     () => objects.filter(o => o.partType === 'handle'),
     [objects],
   );
-  // Eckverbinder (Würfel), Stellfüße und Rollen: immer als SmartMesh (GLB-Modell)
+  // Würfel, Stellfüße und Rollen: immer als SmartMesh
   const strukturObjs = useMemo(
     () => objects.filter(o =>
-      o.partType === 'eckverbinder' || o.partType === 'stellfuss' || o.partType === 'rolle'),
+      o.partType === 'wuerfel' || o.partType === 'eckverbinder' || o.partType === 'stellfuss' || o.partType === 'rolle'),
     [objects],
   );
 
@@ -965,9 +965,9 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
               glbPath={obj.glbFile}
               position={obj.position}
               size={obj.size}
-              color="#b8bec4"
-              roughness={0.18}
-              metalness={0.85}
+              color={obj.color}
+              roughness={obj.roughness ?? 0.18}
+              metalness={obj.metalness ?? 0.85}
               envMapIntensity={0.9}
               preRotation={obj.preRotation}
               nonUniformScale={obj.nonUniformScale}
@@ -1027,9 +1027,9 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
         <PlateHighlight objects={objects} plateId={selectedPlateId} />
       )}
 
-      {/* Ghost Zones — nur in Moebel-Ebene + aktive Selektion (Klick ins Leere blendet aus) */}
+      {/* Ghost Zones — immer sichtbar */}
       <group name="ghost-zones">
-        {drillLevel === 'moebel' && selectedCell && ghostZones.map(zone => (
+        {ghostZones.map(zone => (
           <GhostZone
             key={`ghost_${zone.row}_${zone.col}`}
             row={zone.row}
@@ -1041,9 +1041,9 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
         ))}
       </group>
 
-      {/* Remove Buttons — nur bei aktiver Selektion, auf allen aktiven Zellen */}
+      {/* Remove Buttons — immer sichtbar auf aktiven Zellen */}
       <group name="cell-buttons">
-        {drillLevel === 'moebel' && selectedCell && cellButtons.removes.map(rp => (
+        {cellButtons.removes.map(rp => (
           <RemoveButton
             key={`rm_${rp.row}_${rp.col}`}
             position={rp.position}
