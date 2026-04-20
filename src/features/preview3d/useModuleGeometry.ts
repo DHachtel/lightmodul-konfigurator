@@ -202,8 +202,8 @@ export function computeModuleGeometry(state: ConfigState): SceneObject[] {
         const cellCenterY = yBase + (nR - r - 0.5) * S;
         const cellFrontZ  = zBase + d * S + frameDepth / 2;
 
-        // Rahmenfarbe aus Produktgruppe
-        const grpColor = FRAME_GROUP_BY_V[cell.frameGroup]?.hex ?? '#8090a0';
+        // Rahmenfarbe (Default-Grau, keine Produktgruppen-Zuordnung im Lightmodul)
+        const grpColor = '#8090a0';
         // Beleuchtete Rahmen etwas heller
         const frameColor = cell.type === 'RL'
           ? lightenHex(grpColor, 40)

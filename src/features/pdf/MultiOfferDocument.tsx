@@ -248,62 +248,30 @@ function getActiveDimensions(config: ConfigState) {
   }
   const w = config.cols.slice(minC, maxC + 1).reduce((a, b) => a + b, 0);
   const h = config.rows.slice(minR, maxR + 1).reduce((a, b) => a + b, 0);
-  const cells = config.grid.flat().filter(c => c.type !== '').length;
+  const cells = config.grid.flat(2).filter(c => c.type !== '').length;
   return { totalW: w, totalH: h, activeCells: cells };
 }
 
-/** Kurzbeschreibung des Möbels z.B. "Schwarz · 360 mm Tiefe" */
+/** Kurzbeschreibung des Moebels */
 function describeMoebel(config: ConfigState): string {
-  const matObj = MAT_BY_V[config.surface];
-  const parts: string[] = [];
-  if (matObj?.l) parts.push(matObj.l);
-  parts.push(`${config.depth} mm Tiefe`);
-  return parts.join(' · ');
+  return `${config.depthLayers * 600} mm Tiefe · Profil ${config.profileColor}`;
 }
 
-/** Individuelle Oberflächen-Anpassungen auflisten */
-function describeOverrides(config: ConfigState): string[] {
-  const lines: string[] = [];
-
-  // catOverrides: Kategorie-Level (z.B. "Fronten Klappe: Eiche")
-  const catLabels: Record<string, string> = {
-    boden: 'Böden', klappenboden: 'Klappenböden', ruecken: 'Rückwände',
-    seite_aussen: 'Seiten außen', seite_innen: 'Seiten innen',
-    fachboden: 'Fachböden', front_K: 'Klappen', front_S: 'Schubladen',
-    front_TR: 'Türen R', front_TL: 'Türen L', front_DT: 'Doppeltüren',
-  };
-  for (const [key, ov] of Object.entries(config.catOverrides ?? {})) {
-    if (ov?.oberflaeche) {
-      const mat = MAT_BY_V[ov.oberflaeche];
-      const label = catLabels[key] ?? key;
-      if (mat) lines.push(`${label}: ${mat.l}`);
-    }
-  }
-
-  // bomOverrides: Einzelteil-Level (z.B. "Front R0/C0: Eiche")
-  for (const [boardId, ov] of Object.entries(config.bomOverrides ?? {})) {
-    if (ov?.material) {
-      const mat = MAT_BY_V[ov.material];
-      if (mat) lines.push(`${boardId}: ${mat.l}`);
-    }
-  }
-
-  // Kabeldurchlässe mit Position
-  for (const [boardId, active] of Object.entries(config.cableHoles ?? {})) {
-    if (active) lines.push(`Kabeldurchlass: ${boardId}`);
-  }
-
-  return lines;
+/** Lightmodul hat keine individuellen Oberflaechen-Overrides */
+function describeOverrides(_config: ConfigState): string[] {
+  return [];
 }
 
-/** Fronten zählen und als Text zusammenfassen */
+/** Rahmentypen zaehlen und als Text zusammenfassen */
 function describeFronts(config: ConfigState): string {
   const counts: Record<string, number> = {};
   for (const row of config.grid) {
-    for (const cell of row) {
-      if (cell.type && cell.type !== 'O') {
-        const label = { K: 'Klappe', S: 'Schublade', S2: '2× Schublade', TR: 'Tür R', TL: 'Tür L', DT: 'Doppeltür' }[cell.type] ?? cell.type;
-        counts[label] = (counts[label] ?? 0) + 1;
+    for (const colArr of row) {
+      for (const cell of colArr) {
+        if (cell.type && cell.type !== '' && cell.type !== 'O') {
+          const label = cell.type === 'RF' ? 'Standard' : cell.type === 'RL' ? 'Beleuchtet' : cell.type;
+          counts[label] = (counts[label] ?? 0) + 1;
+        }
       }
     }
   }
@@ -324,34 +292,23 @@ interface BomDisplayItem {
   dim_key?: string;
 }
 
-/** BOM-Zeilen aus BOMResult generieren */
+/** BOM-Zeilen aus BOMResult generieren (Lightmodul) */
 function buildBomDisplayItems(bom: BOMResult, config: ConfigState): BomDisplayItem[] {
   const items: BomDisplayItem[] = [];
 
-  // Würfel
-  if (bom.wuerfel > 0)
-    items.push({ bezeichnung: 'Würfel 30mm', qty: bom.wuerfel });
+  if (bom.wuerfel > 0) items.push({ bezeichnung: 'Alu-Wuerfel 27mm', qty: bom.wuerfel });
+  if (bom.profileX > 0) items.push({ bezeichnung: 'Profil X (Breite) 600mm', qty: bom.profileX, dim_key: '600' });
+  if (bom.profileY > 0) items.push({ bezeichnung: 'Profil Y (Hoehe) 600mm', qty: bom.profileY, dim_key: '600' });
+  if (bom.profileZ > 0) items.push({ bezeichnung: 'Profil Z (Tiefe) 600mm', qty: bom.profileZ, dim_key: '600' });
+  if (bom.framesStd > 0) items.push({ bezeichnung: 'Einlegerahmen Standard', qty: bom.framesStd });
+  if (bom.framesLit > 0) items.push({ bezeichnung: 'Einlegerahmen beleuchtet', qty: bom.framesLit });
+  if (bom.shelves > 0) items.push({ bezeichnung: 'Fachboden', qty: bom.shelves });
+  if (bom.schraubenM4 > 0) items.push({ bezeichnung: 'Senkschrauben M4x8', qty: bom.schraubenM4 });
+  if (bom.schraubenM6 > 0) items.push({ bezeichnung: 'Zylinderschrauben M6x40', qty: bom.schraubenM6 });
+  if (bom.scheiben > 0) items.push({ bezeichnung: 'U-Scheiben D6,4', qty: bom.scheiben });
+  if (bom.einlegemuttern > 0) items.push({ bezeichnung: 'Einlegemuttern', qty: bom.einlegemuttern });
 
-  // Profile — zusammengefasst nach Länge
-  const allProfiles: Record<string, number> = {};
-  for (const [l, q] of Object.entries(bom.pB)) allProfiles[l] = (allProfiles[l] ?? 0) + q;
-  for (const [l, q] of Object.entries(bom.pH)) allProfiles[l] = (allProfiles[l] ?? 0) + q;
-  for (const [l, q] of Object.entries(bom.pT)) allProfiles[l] = (allProfiles[l] ?? 0) + q;
-  for (const [len, qty] of Object.entries(allProfiles))
-    items.push({ bezeichnung: `Profil 30mm ${len}mm`, qty, dim_key: len });
-
-  // Platten-Helfer
-  const addDimMap = (map: Record<string, number>, label: string) => {
-    for (const [dim, qty] of Object.entries(map))
-      if (qty > 0) items.push({ bezeichnung: `${label} ${dim}mm`, qty, dim_key: dim });
-  };
-
-  addDimMap(bom.bStd, 'Boden');
-  addDimMap(bom.bKl, 'Klappenboden');
-  addDimMap(bom.rMap, 'Rücken');
-  addDimMap(bom.sAMap, 'Seite außen');
-  addDimMap(bom.sAMapSY32, 'Seite außen SY32');
-  addDimMap(bom.sIMap, 'Seite innen');
+  void config; // used for footer lookup below
   addDimMap(bom.sIMapSY32, 'Seite innen SY32');
   addDimMap(bom.fbMap, 'Fachboden');
 

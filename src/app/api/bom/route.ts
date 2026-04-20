@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient, createServiceSupabaseClient } from '@/lib/supabase/server';
 import { computeBOM } from '@/core/calc';
-import { FOOTER_BY_V, HANDLES, MAT_BY_V } from '@/core/constants';
+import { FOOTER_BY_V } from '@/core/constants';
 import { BomRequestSchema, formatZodError } from '@/core/schemas';
 
 // ── DB-Typen ──────────────────────────────────────────────────────────────────
@@ -164,9 +164,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const prices = priceRows as ArticlePrice[];
   const priceMap = buildPriceMap(prices);
 
-  // ── Material → PG-Gruppe (global, für Nicht-Platten-Artikel) ─────────────────
-  const matObj = MAT_BY_V[config.surface];
-  const pg = matObj?.pg ?? 'PG1'; // Fallback: PG1 (MDF)
+  // Lightmodul hat keine Oberflächen-PG-Gruppen — immer PG1
+  const pg = 'PG1';
 
   // ── Preispositionen sammeln ─────────────────────────────────────────────────
   const items: PriceLineItem[] = [];
@@ -211,60 +210,30 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const wuerfelRow = lookup(priceMap, 'Würfel 30mm');
   addItem('Würfel 30mm', 'Würfel 30mm', wuerfelRow, bom.wuerfel, false);
 
-  // ── Profile ─────────────────────────────────────────────────────────────────
-  const allProfiles: Record<string, number> = {};
-  for (const [len, qty] of Object.entries(bom.pB)) allProfiles[len] = (allProfiles[len] ?? 0) + qty;
-  for (const [len, qty] of Object.entries(bom.pH)) allProfiles[len] = (allProfiles[len] ?? 0) + qty;
-  for (const [len, qty] of Object.entries(bom.pT)) allProfiles[len] = (allProfiles[len] ?? 0) + qty;
-
-  for (const [len, qty] of Object.entries(allProfiles)) {
-    const row = lookup(priceMap, 'Profil', Number(len));
-    addItem(`Profil 30mm ${len}mm`, 'Profil', row, qty, false, len);
+  // ── Profile (Lightmodul: alle 600mm) ──────────────────────────────────────
+  {
+    const totalProfiles = bom.profileTotal;
+    const row = lookup(priceMap, 'Profil', 600);
+    addItem('Profil 25mm 600mm', 'Profil', row, totalProfiles, false, '600');
   }
 
-  // ── Platten + Fronten — per Variante (Oberfläche + Kabel) ─────────────────
-  for (const v of variants) {
-    const [b, t] = parseDim(v.dim);
-    const row = lookup(priceMap, v.kategorie, b, t);
-    if (!row) {
-      if (v.qty > 0) missingItems.push(`${v.label} ${v.dim}mm (${v.qty}×)`);
-      continue;
-    }
-
-    const up = unitPrice(row, v.pg, currency);
-    if (up === null) {
-      missingItems.push(`${v.label} ${v.dim}mm — kein Preis in ${v.pg}/${currency}`);
-      continue;
-    }
-
-    const finalUp = priceType === 'EK' ? up * (1 - discountPct) : up;
-    const surfaceSuffix = v.surfaceLabel !== 'Keine' ? ` · ${v.surfaceLabel}` : '';
-    const cableSuffix = v.hasCable ? ' · Kabeldurchlass' : '';
-
-    items.push({
-      art_nr: row.art_nr,
-      bezeichnung: `${v.label} ${v.dim}mm${surfaceSuffix}${cableSuffix}`,
-      kategorie: v.kategorie,
-      qty: v.qty,
-      unit_price: Math.round(finalUp * 100) / 100,
-      total_price: Math.round(finalUp * v.qty * 100) / 100,
-      dim_key: v.dim,
-      pg: v.pg,
-    });
+  // ── Einlegerahmen ─────────────────────────────────────────────────────────
+  if (bom.framesStd > 0) {
+    const row = lookup(priceMap, 'Einlegerahmen', 600);
+    addItem('Einlegerahmen Standard', 'Einlegerahmen', row, bom.framesStd, false, 'RF');
+  }
+  if (bom.framesLit > 0) {
+    const row = lookup(priceMap, 'Einlegerahmen beleuchtet', 600);
+    addItem('Einlegerahmen beleuchtet', 'Einlegerahmen', row, bom.framesLit, false, 'RL');
   }
 
-  // ── Griff ────────────────────────────────────────────────────────────────────
-  if (bom.frontGes > 0) {
-    const handleDef = HANDLES.find(h => h.v === config.handle);
-    if (handleDef) {
-      const normalizedLabel = normalizeLabel(handleDef.l);
-      // Griff-Artikel nach normalisierter Bezeichnung suchen
-      const griffRow = prices.find(
-        p => p.kategorie === 'Griff' && normalizeLabel(p.bezeichnung) === normalizedLabel,
-      );
-      addItem(handleDef.l, 'Griff', griffRow, bom.frontGes, false);
-    }
+  // ── Fachboeden ──────────────────────────────────────────────────────────────
+  if (bom.shelves > 0) {
+    const row = lookup(priceMap, 'Fachboden');
+    addItem('Fachboden', 'Fachboden', row, bom.shelves, false);
   }
+
+  // Lightmodul hat keine Griffe
 
   // ── Füße / Rollen ─────────────────────────────────────────────────────────────
   if (bom.footerQty > 0) {
@@ -280,26 +249,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
   }
 
-  // ── Kabeldurchlass ──────────────────────────────────────────────────────────
-  const cableQty = Object.values(config.cableHoles ?? {}).filter(Boolean).length;
-  if (cableQty > 0) {
-    const cableRow = prices.find(p => String(p.art_nr) === '9001');
-    if (cableRow) {
-      const cup = unitPrice(cableRow, 'PG1', currency);
-      if (cup !== null) {
-        const finalCup = priceType === 'EK' ? cup * (1 - discountPct) : cup;
-        items.push({
-          art_nr: '9001',
-          bezeichnung: 'Kabeldurchlass ⌀80mm',
-          kategorie: 'Kabeldurchlass',
-          qty: cableQty,
-          unit_price: Math.round(finalCup * 100) / 100,
-          total_price: Math.round(finalCup * cableQty * 100) / 100,
-          dim_key: '⌀80mm',
-        });
-      }
-    }
-  }
+  // Lightmodul hat keine Kabeldurchlaesse
 
   // ── Subtotals berechnen ──────────────────────────────────────────────────────
   const subtotals: Record<string, number> = {};

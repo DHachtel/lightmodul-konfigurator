@@ -150,7 +150,7 @@ function ConfiguratorShellInner() {
       // Konfigurations-Zusammenfassung für E-Mail
       const totalW = state.cols.reduce((a, b) => a + b, 0) + 30;
       const totalH = state.rows.reduce((a, b) => a + b, 0) + 30;
-      const configSummary = `${state.cols.length}×${state.rows.length}, ${totalW} × ${totalH} × ${state.depth + 30} mm`;
+      const configSummary = `${state.cols.length}×${state.rows.length}, ${totalW} × ${totalH} × ${totalDepthMM(state)} mm`;
 
       const res = await fetch('/api/orders', {
         method: 'POST',
@@ -190,7 +190,7 @@ function ConfiguratorShellInner() {
     } finally {
       setOrderLoading(false);
     }
-  }, [actions.moebelId, orderName, orderEmail, orderPhone, orderCompany, orderStreet, orderZip, orderCity, orderNote, orderGdpr, currency, state.cols, state.rows, state.depth, offerItems]);
+  }, [actions.moebelId, orderName, orderEmail, orderPhone, orderCompany, orderStreet, orderZip, orderCity, orderNote, orderGdpr, currency, state.cols, state.rows, state.depthLayers, offerItems]);
 
   // ── Speichern ──
   const [saveLoading, setSaveLoading] = useState(false);
@@ -278,14 +278,14 @@ function ConfiguratorShellInner() {
   const handleXlsExport = useCallback(async () => {
     const exportBom = actions.committedBOM ?? bom;
     if (!exportBom) { alert('Keine Stückliste vorhanden.'); return; }
-    const matObj = MAT_BY_V[state.surface];
     const ts = new Date().toLocaleDateString('de-DE').replace(/\./g, '-');
     const { rows, overrideRows } = buildBOMRowsExtended(
-      exportBom, state.surface, matObj, state.bomOverrides, exportBom.catOverrides, boardVariants,
-      pricing?.items ?? null, actions.moebelId !== null ? String(actions.moebelId) : undefined,
+      exportBom,
+      pricing?.items ?? null,
+      actions.moebelId !== null ? String(actions.moebelId) : undefined,
     );
     await downloadXLSXExtended(rows, overrideRows, `Lightmodul_Stueckliste_${actions.moebelId !== null ? String(actions.moebelId) : ts}.xlsx`);
-  }, [actions.committedBOM, actions.moebelId, bom, state.surface, state.bomOverrides, boardVariants, pricing]);
+  }, [actions.committedBOM, actions.moebelId, bom, pricing]);
 
   // ── Datenblatt-Export ──
   const [datasheetLoading, setDatasheetLoading] = useState(false);
@@ -420,7 +420,7 @@ function ConfiguratorShellInner() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 0 }}>
           <div style={{ width: 1, height: 28, background: 'rgba(255,255,255,0.14)', flexShrink: 0 }} />
           <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap' }}>
-            {totalMM.aC}×{totalMM.aR} · {totalMM.w + 30} × {totalMM.h + 30} × {state.depth + 30} mm
+            {totalMM.aC}×{totalMM.aR} · {totalMM.w + 30} × {totalMM.h + 30} × {totalDepthMM(state)} mm
           </span>
           {/* Möbel laden per ID */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -623,7 +623,7 @@ function ConfiguratorShellInner() {
                   Möbel-ID <strong style={{ fontVariantNumeric: 'tabular-nums', color: '#1C1A17' }}>#{actions.moebelId}</strong>
                   {' · '}
                   {state.cols.length}×{state.rows.length},&nbsp;
-                  {state.cols.reduce((a, b) => a + b, 0) + 30} × {state.rows.reduce((a, b) => a + b, 0) + 30} × {state.depth + 30} mm
+                  {state.cols.reduce((a, b) => a + b, 0) + 30} × {state.rows.reduce((a, b) => a + b, 0) + 30} × {totalDepthMM(state)} mm
                 </div>
               )}
             </div>

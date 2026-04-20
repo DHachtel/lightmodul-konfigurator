@@ -1,11 +1,9 @@
-import type { DimMap } from '@/core/types';
-
-/** Einträge einer DimMap alphabetisch nach Schlüssel sortieren */
-export function sortEntries(m: DimMap): [string, number][] {
-  return Object.entries(m).sort(([a], [b]) => a.localeCompare(b));
+/** Eintraege eines Record<string, number> alphabetisch nach Schluessel sortieren */
+export function sortEntries(m: Record<string, number>): [string, number][] {
+  return (Object.entries(m) as [string, number][]).sort(([a], [b]) => a.localeCompare(b));
 }
 
-/** Hex-Farbe um `amount` (0–1) abdunkeln */
+/** Hex-Farbe um `amount` (0-1) abdunkeln */
 export function darkenHex(hex: string, amount = 0.15): string {
   const c = hex.replace('#', '');
   if (c.length !== 6) return hex;

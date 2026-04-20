@@ -250,12 +250,12 @@ interface GridSVGProps {
 function GridSVG({ config, bom, width, height }: GridSVGProps) {
   const { cols: CW, rows: RH, grid } = config;
 
-  // Nur aktive Bereich (bounding box)
-  const minR = RH.length - bom.activeRows.length;
-  const minC = CW.length - bom.activeCols.length;
+  // Lightmodul: gesamtes Grid verwenden
+  const minR = 0;
+  const minC = 0;
 
-  const totalW = bom.activeCols.reduce((a, b) => a + b, 0);
-  const totalH = bom.activeRows.reduce((a, b) => a + b, 0);
+  const totalW = CW.reduce((a: number, b: number) => a + b, 0);
+  const totalH = RH.reduce((a: number, b: number) => a + b, 0);
 
   const pad = 4;
   const scaleX = (width  - 2 * pad) / totalW;
@@ -282,8 +282,8 @@ function GridSVG({ config, bom, width, height }: GridSVGProps) {
     const ri = r - minR;
     for (let c = minC; c < CW.length; c++) {
       const ci = c - minC;
-      const cell = grid[r]?.[c];
-      const type = cell?.type ?? '';
+      const cellArr = grid[r]?.[c];
+      const type = cellArr?.[0]?.type ?? '';
       cells.push(
         <Rect
           key={`c_${r}_${c}`}
@@ -319,13 +319,13 @@ interface OfferDocumentProps {
 
 export function OfferDocument({ config, pricing, bom }: OfferDocumentProps) {
   const csym = pricing.currency === 'CHF' ? 'CHF' : '€';
-  const matObj    = MAT_BY_V[config.surface];
-  const handleObj = HANDLE_BY_V[config.handle];
+  const matObj: { l: string; pg: string } | null = null;
+  const handleObj: { l: string } | null = null;
   const footerObj = FOOTER_BY_V[config.footer];
 
-  const totalW = bom.activeCols.reduce((a, b) => a + b, 0) + 30;
-  const totalH = bom.activeRows.reduce((a, b) => a + b, 0) + 30;
-  const metaDim = `${totalW}×${totalH}×${bom.D + 30} mm`;
+  const totalW = bom.totalWidth;
+  const totalH = bom.totalHeight;
+  const metaDim = `${totalW}x${totalH}x${bom.totalDepth} mm`;
 
   // Preis-Items nach Kategorie-Reihenfolge sortieren
   const sortedItems = [...pricing.items].sort((a, b) => {

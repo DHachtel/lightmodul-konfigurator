@@ -8,8 +8,8 @@ import {
   Image,
   StyleSheet,
 } from '@react-pdf/renderer';
-import type { BOMResult, ConfigState, DimMap } from '@/core/types';
-import { HANDLE_BY_V, FOOTER_BY_V, MAT_BY_V } from '@/core/constants';
+import type { BOMResult, ConfigState } from '@/core/types';
+import { FOOTER_BY_V } from '@/core/constants';
 import { TechnicalDrawingView } from './TechnicalDrawing';
 
 // Helvetica (built-in) — schlicht und klassisch, keine Font-Registrierung nötig
@@ -167,7 +167,7 @@ function getActiveDimensions(config: ConfigState) {
   if (maxR < 0) { minR = 0; maxR = numRows - 1; minC = 0; maxC = numCols - 1; }
   const w = config.cols.slice(minC, maxC + 1).reduce((a, b) => a + b, 0);
   const h = config.rows.slice(minR, maxR + 1).reduce((a, b) => a + b, 0);
-  const cells = config.grid.flat().filter(c => c.type !== '').length;
+  const cells = config.grid.flat(2).filter(c => c.type !== '').length;
   return { totalW: w, totalH: h, activeCells: cells };
 }
 
@@ -177,65 +177,28 @@ interface BomDisplayItem {
   dim_key?: string;
 }
 
-/** BOM-Zeilen aus BOMResult generieren */
+/** BOM-Zeilen aus BOMResult generieren (Lightmodul) */
 function buildBomDisplayItems(bom: BOMResult, config: ConfigState): BomDisplayItem[] {
   const items: BomDisplayItem[] = [];
 
-  // Würfel
-  if (bom.wuerfel > 0)
-    items.push({ bezeichnung: 'Würfel 30mm', qty: bom.wuerfel });
+  if (bom.wuerfel > 0) items.push({ bezeichnung: 'Alu-Wuerfel 27mm', qty: bom.wuerfel });
+  if (bom.profileX > 0) items.push({ bezeichnung: 'Profil X (Breite) 600mm', qty: bom.profileX, dim_key: '600' });
+  if (bom.profileY > 0) items.push({ bezeichnung: 'Profil Y (Hoehe) 600mm', qty: bom.profileY, dim_key: '600' });
+  if (bom.profileZ > 0) items.push({ bezeichnung: 'Profil Z (Tiefe) 600mm', qty: bom.profileZ, dim_key: '600' });
+  if (bom.framesStd > 0) items.push({ bezeichnung: 'Einlegerahmen Standard', qty: bom.framesStd });
+  if (bom.framesLit > 0) items.push({ bezeichnung: 'Einlegerahmen beleuchtet', qty: bom.framesLit });
+  if (bom.shelves > 0) items.push({ bezeichnung: 'Fachboden', qty: bom.shelves });
+  if (bom.schraubenM4 > 0) items.push({ bezeichnung: 'Senkschrauben M4x8', qty: bom.schraubenM4 });
+  if (bom.schraubenM6 > 0) items.push({ bezeichnung: 'Zylinderschrauben M6x40', qty: bom.schraubenM6 });
+  if (bom.scheiben > 0) items.push({ bezeichnung: 'U-Scheiben D6,4', qty: bom.scheiben });
+  if (bom.einlegemuttern > 0) items.push({ bezeichnung: 'Einlegemuttern', qty: bom.einlegemuttern });
 
-  // Profile (zusammengefasst nach Länge)
-  const allProfiles: Record<string, number> = {};
-  for (const [l, q] of Object.entries(bom.pB)) allProfiles[l] = (allProfiles[l] ?? 0) + q;
-  for (const [l, q] of Object.entries(bom.pH)) allProfiles[l] = (allProfiles[l] ?? 0) + q;
-  for (const [l, q] of Object.entries(bom.pT)) allProfiles[l] = (allProfiles[l] ?? 0) + q;
-  for (const [len, qty] of Object.entries(allProfiles))
-    items.push({ bezeichnung: `Profil 30mm ${len}mm`, qty, dim_key: len });
-
-  // Platten-Helfer
-  const addDimMap = (map: DimMap, label: string) => {
-    for (const [dim, qty] of Object.entries(map))
-      if (qty > 0) items.push({ bezeichnung: `${label} ${dim}mm`, qty, dim_key: dim });
-  };
-
-  addDimMap(bom.bStd, 'Boden');
-  addDimMap(bom.bKl, 'Klappenboden');
-  addDimMap(bom.rMap, 'Rücken');
-  addDimMap(bom.sAMap, 'Seite außen');
-  addDimMap(bom.sAMapSY32, 'Seite außen SY32');
-  addDimMap(bom.sIMap, 'Seite innen');
-  addDimMap(bom.sIMapSY32, 'Seite innen SY32');
-  addDimMap(bom.fbMap, 'Fachboden');
-
-  // Fronten — pro Typ × Dimension
-  const frontLabels: Record<string, string> = { K: 'Klappe', S: 'Schublade', TR: 'Tür rechts', TL: 'Tür links', DT: 'Doppeltür' };
-  for (const [typ, m] of Object.entries(bom.fMap) as [string, DimMap][]) {
-    for (const [dim, qty] of Object.entries(m))
-      if (qty > 0) items.push({ bezeichnung: `${frontLabels[typ] ?? typ} ${dim}mm`, qty, dim_key: dim });
-  }
-
-  // Griffe
-  if (bom.frontGes > 0) {
-    const hObj = HANDLE_BY_V[config.handle];
-    items.push({ bezeichnung: `Griff ${hObj?.l ?? config.handle}`, qty: bom.frontGes });
-  }
-
-  // Beschläge
-  if (bom.scharn > 0) items.push({ bezeichnung: 'Scharniere', qty: bom.scharn });
-  if (bom.kHalt > 0) items.push({ bezeichnung: 'Klappenhalter', qty: bom.kHalt });
-  if (bom.kDaem > 0) items.push({ bezeichnung: 'Klappendämpfer', qty: bom.kDaem });
-  if (bom.schubF > 0) items.push({ bezeichnung: 'Schubkastenführung', qty: bom.schubF });
-
-  // Füße/Rollen
   if (bom.footerQty > 0) {
     const fObj = FOOTER_BY_V[config.footer];
     items.push({ bezeichnung: fObj?.l ?? config.footer, qty: bom.footerQty });
   }
 
-  // Kleinteile
-  if (bom.bolzen > 0) items.push({ bezeichnung: 'Bolzen-Set (Sicherung + Gewinde + Maden + Verdrehsicherung)', qty: bom.bolzen });
-  if (bom.klemm > 0) items.push({ bezeichnung: 'Klemmsterne', qty: bom.klemm });
+  // (Hardware ist bereits oben aufgelistet)
 
   return items;
 }
@@ -278,8 +241,8 @@ interface Props {
 }
 
 export function DatasheetDocument({ config, bom, grandTotal = 0, currency = 'EUR', screenshot3d, moebelId }: Props) {
-  const matObj = MAT_BY_V[config.surface];
-  const handleObj = HANDLE_BY_V[config.handle];
+  const matObj: { l: string; pg: string } | null = null; // Lightmodul hat keine Oberflaechen-Auswahl
+  const handleObj: { l: string } | null = null; // Lightmodul hat keine Griffe
   const { totalW, totalH, activeCells } = getActiveDimensions(config);
   const ts = new Date().toLocaleDateString('de-DE');
 
@@ -321,7 +284,7 @@ export function DatasheetDocument({ config, bom, grandTotal = 0, currency = 'EUR
             {[
               { l: 'Breite', v: `${totalW + 30} mm` },
               { l: 'Höhe', v: `${totalH + 30} mm` },
-              { l: 'Tiefe', v: `${config.depth} mm` },
+              { l: 'Tiefe', v: `${config.depthLayers * 600} mm` },
               { l: 'Felder', v: `${activeCells}` },
               { l: 'Gewicht ca.', v: `~${Math.round(activeCells * 8)} kg` },
             ].map(k => (
@@ -345,7 +308,7 @@ export function DatasheetDocument({ config, bom, grandTotal = 0, currency = 'EUR
             </Text>
           )}
           <Text style={S.configItem}>
-            Tiefe: <Text style={S.configValue}>{config.depth} mm</Text>
+            Tiefe: <Text style={S.configValue}>{config.depthLayers * 600} mm</Text>
           </Text>
         </View>
 

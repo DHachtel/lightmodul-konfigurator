@@ -6,9 +6,24 @@ import { Canvas, useThree } from '@react-three/fiber';
 import { ContactShadows, CameraControls, Edges } from '@react-three/drei';
 import type CameraControlsImpl from 'camera-controls';
 import * as THREE from 'three';
+
+// Shape and Path: runtime classes from three.js, types not fully exported in @types/three
+interface ShapeLike {
+  moveTo(x: number, y: number): void;
+  lineTo(x: number, y: number): void;
+  closePath(): void;
+  holes: PathLike[];
+}
+interface PathLike {
+  moveTo(x: number, y: number): void;
+  lineTo(x: number, y: number): void;
+  closePath(): void;
+}
+const ShapeCtor = (THREE as unknown as Record<string, new () => ShapeLike>).Shape;
+const PathCtor = (THREE as unknown as Record<string, new () => PathLike>).Path;
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
-import type { ConfigState, BomCatOverride } from '@/core/types';
-import { MAT_BY_V, MATERIALS, MAX_COLS, MAX_ROWS } from '@/core/constants';
+import type { ConfigState } from '@/core/types';
+import { ELEMENT_SIZE_MM, MAT_BY_V, MATERIALS, MAX_COLS, MAX_ROWS } from '@/core/constants';
 import { useModuleGeometry, type SceneObject } from './useModuleGeometry';
 import SmartMesh from './SmartMesh';
 import GhostZone from './GhostZone';
@@ -30,7 +45,7 @@ function getActiveBounds(state: ConfigState) {
   let minR = numRows, maxR = -1, minC = numCols, maxC = -1;
   for (let r = 0; r < numRows; r++)
     for (let c = 0; c < numCols; c++)
-      if (state.grid[r][c].type !== '') {
+      if (state.grid[r]?.[c]?.some(cell => cell.type !== '')) {
         if (r < minR) minR = r; if (r > maxR) maxR = r;
         if (c < minC) minC = c; if (c > maxC) maxC = c;
       }
@@ -186,7 +201,7 @@ function createPlateWithHole(w: number, h: number, d: number): THREE.ExtrudeGeom
   }
 
   // Äußerer Umriss der Plattenfläche
-  const shape = new THREE.Shape();
+  const shape = new ShapeCtor();
   shape.moveTo(-faceW / 2, -faceH / 2);
   shape.lineTo(faceW / 2, -faceH / 2);
   shape.lineTo(faceW / 2, faceH / 2);
@@ -200,7 +215,7 @@ function createPlateWithHole(w: number, h: number, d: number): THREE.ExtrudeGeom
     ? faceH / 2 - CABLE_MARGIN - hh     // Boden: Loch zum hinteren Rand
     : -faceH / 2 + CABLE_MARGIN + hh;   // Seite/Rücken: Loch zum unteren Rand
 
-  const hole = new THREE.Path();
+  const hole = new PathCtor();
   hole.moveTo(-hw, holeCY - hh);
   hole.lineTo(hw, holeCY - hh);
   hole.lineTo(hw, holeCY + hh);
@@ -240,7 +255,7 @@ function createRoundedPlate(w: number, h: number, d: number, radius: number): TH
   const r = Math.min(radius, faceW / 2, faceH / 2);
   const hw = faceW / 2, hh = faceH / 2;
 
-  const shape = new THREE.Shape();
+  const shape = new ShapeCtor();
   shape.moveTo(-hw + r, -hh);
   shape.lineTo(hw - r, -hh);
   shape.quadraticCurveTo(hw, -hh, hw, -hh + r);
@@ -272,7 +287,7 @@ function PlattenPart({
   debug,
 }: {
   obj: SceneObject;
-  catOverrides: Record<string, BomCatOverride>;
+  catOverrides: Record<string, { anzahl?: number; oberflaeche?: string; kabel?: boolean }>;
   onPlateClick?: (row: number, col: number, plateId: string, partType: string) => void;
   partColors?: Record<string, string>;
   cellColors?: Record<string, string>;
@@ -622,7 +637,7 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
   const dv = debugMode ? debugValues : undefined;
   // Stabiler Hash aus Grid-Typen — ändert sich nur bei echten Strukturänderungen
   const gridHash = useMemo(
-    () => state.grid.map(row => row.map(c => c.type).join(',')).join('|'),
+    () => state.grid.map(row => row.map(colArr => colArr.map(c => c.type).join('.')).join(',')).join('|'),
     [state.grid],
   );
 
@@ -638,7 +653,7 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
   const outerH = hAct * S;
 
   // Initiale Kameraposition (wird durch fitToBox überschrieben)
-  const camDist = Math.max(outerW, outerH, state.depth * S) * 6.0;
+  const camDist = Math.max(outerW, outerH, state.depthLayers * ELEMENT_SIZE_MM * S) * 6.0;
 
   // Frontalansicht: Kamera vor dem Möbel (Z), leicht erhöht (Y), minimal seitlich (X)
   const camPos = useMemo<[number, number, number]>(
@@ -658,7 +673,7 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
   const boxMinZ = -0.15;
   const boxMaxX = (xOff + wAct + 15) * S;
   const boxMaxY = (yOff + hAct + 15) * S;
-  const boxMaxZ = (state.depth + 15 + 10) * S;
+  const boxMaxZ = (state.depthLayers * ELEMENT_SIZE_MM + 15 + 10) * S;
 
   const objects = useModuleGeometry(state);
 
@@ -668,7 +683,7 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
     let minR = numRows, maxR = -1, minC = numCols, maxC = -1;
     for (let r = 0; r < numRows; r++)
       for (let c = 0; c < numCols; c++)
-        if (state.grid[r][c].type !== '') {
+        if (state.grid[r]?.[c]?.some(cell => cell.type !== '')) {
           if (r < minR) minR = r; if (r > maxR) maxR = r;
           if (c < minC) minC = c; if (c > maxC) maxC = c;
         }
@@ -679,7 +694,7 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
   const ghostZones = useMemo(() => {
     const zones: { side: GhostSide; position: [number, number, number]; size: [number, number, number] }[] = [];
     const { minR, maxR, minC, maxC } = activeRange;
-    const depth = state.depth * S;
+    const depth = state.depthLayers * ELEMENT_SIZE_MM * S;
     const depthCenter = depth / 2;
 
     const activeYBottom = state.rows.slice(maxR + 1).reduce((a, b) => a + b, 0) * S;
@@ -715,7 +730,7 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
     }
 
     return zones;
-  }, [activeRange, state.cols, state.rows, state.depth]);
+  }, [activeRange, state.cols, state.rows, state.depthLayers * ELEMENT_SIZE_MM]);
 
   // Ghost Zone Klick → sofort hinzufügen (kein Popover, Breite = Nachbar)
   const handleGhostClick = useCallback((side: GhostSide) => {
@@ -739,9 +754,9 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
         const w = state.cols[c];
         const h = state.rows[r];
 
-        const isOccupied = state.grid[r]?.[c]?.type !== '' && state.grid[r]?.[c]?.type !== undefined;
-        const hasElementAbove = r > 0 && state.grid[r - 1]?.[c]?.type !== '' && state.grid[r - 1]?.[c]?.type !== undefined;
-        const hasElementBelow = r < lastRow && state.grid[r + 1]?.[c]?.type !== '' && state.grid[r + 1]?.[c]?.type !== undefined;
+        const isOccupied = state.grid[r]?.[c]?.some(cell => cell.type !== '') ?? false;
+        const hasElementAbove = r > 0 && (state.grid[r - 1]?.[c]?.some(cell => cell.type !== '') ?? false);
+        const hasElementBelow = r < lastRow && (state.grid[r + 1]?.[c]?.some(cell => cell.type !== '') ?? false);
         const isBottomRow = r === lastRow;
 
         if (isOccupied) {
@@ -749,7 +764,7 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
           if (!hasElementAbove) {
             removes.push({
               row: r, col: c,
-              position: [(xLeft + w) * S, (yBottom + h) * S, (state.depth + 20) * S],
+              position: [(xLeft + w) * S, (yBottom + h) * S, (state.depthLayers * ELEMENT_SIZE_MM + 20) * S],
             });
           }
         } else {
@@ -757,14 +772,14 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
           if (hasElementBelow || isBottomRow) {
             adds.push({
               row: r, col: c,
-              position: [(xLeft + w / 2) * S, (yBottom + h / 2) * S, (state.depth + 20) * S],
+              position: [(xLeft + w / 2) * S, (yBottom + h / 2) * S, (state.depthLayers * ELEMENT_SIZE_MM + 20) * S],
             });
           }
         }
       }
     }
     return { removes, adds };
-  }, [activeRange, state.grid, state.cols, state.rows, state.depth]);
+  }, [activeRange, state.grid, state.cols, state.rows, state.depthLayers]);
 
   // Szene-Objekte in Gruppen aufteilen: Platten, Profile, Griffe, GLB-Strukturteile
   const PLATTE_TYPES = new Set(['seite_l','seite_r','boden','deckel','ruecken','zwischenboden','zwischenwand','fachboden','front']);
@@ -790,12 +805,12 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
   // Grundplatte: zentriert unter dem aktiven Möbel, Y-Unterkante = yOff * S - 5mm
   const groundY  = yOff * S - 0.065;
   const groundW  = outerW * 2.0;
-  const groundD  = state.depth * S * 2.5;
+  const groundD  = state.depthLayers * ELEMENT_SIZE_MM * S * 2.5;
   const groundCx = (xOff + wAct / 2) * S;
-  const groundCz = state.depth / 2 * S;
+  const groundCz = state.depthLayers * ELEMENT_SIZE_MM / 2 * S;
 
   // Scale für ContactShadows: Fußabdruck des Möbels mal 2 (in Three.js-Einheiten)
-  const shadowScale = Math.max(outerW, state.depth * S) * 2 + 1;
+  const shadowScale = Math.max(outerW, state.depthLayers * ELEMENT_SIZE_MM * S) * 2 + 1;
 
   // CameraControls-Ref für CameraAutoFrame
   const ccRef = useRef<CameraControlsImpl | null>(null);
@@ -874,11 +889,11 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
           <PlattenPart
             key={obj.id}
             obj={obj}
-            catOverrides={state.catOverrides}
+            catOverrides={{}}
             onPlateClick={onPlateClick}
-            partColors={state.partColors}
-            cellColors={state.cellColors}
-            hasCableHole={!!state.cableHoles[obj.id]}
+            partColors={{}}
+            cellColors={{}}
+            hasCableHole={false}
             debug={dv}
           />
         ))}
@@ -992,8 +1007,8 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
           <ColumnRowLabels
             cols={state.cols}
             rows={state.rows}
-            grid={state.grid}
-            depth={state.depth}
+            grid={state.grid.map(row => row.map(colArr => colArr[0] ?? { type: '' }))}
+            depth={state.depthLayers * ELEMENT_SIZE_MM}
             onSetCol={onSetCol}
             onSetRow={onSetRow}
           />
@@ -1025,8 +1040,8 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
           <DimensionOverlay
             cols={state.cols}
             rows={state.rows}
-            depth={state.depth}
-            grid={state.grid}
+            depth={state.depthLayers * ELEMENT_SIZE_MM}
+            grid={state.grid.map(row => row.map(colArr => colArr[0] ?? { type: '' }))}
             footerHeight={
               state.footer.startsWith('stell') ? 60
               : state.footer.startsWith('rolle') ? 60

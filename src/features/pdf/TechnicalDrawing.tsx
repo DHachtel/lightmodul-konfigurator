@@ -74,7 +74,7 @@ function getActiveBounds(config: ConfigState) {
 // ── Front-Symbole ─────────────────────────────────────────────────────────────
 
 function frontSymbol(
-  type: CellType, x: number, y: number, w: number, h: number, s: number,
+  type: string, x: number, y: number, w: number, h: number, s: number,
 ): React.ReactElement[] {
   const els: React.ReactElement[] = [];
   const key = `front_${x}_${y}`;
@@ -230,7 +230,7 @@ export function TechnicalDrawingView({ config }: { config: ConfigState }) {
   const fronts: React.ReactElement[] = [];
   for (let ri = 0; ri < activeRows.length; ri++) {
     for (let ci = 0; ci < activeCols.length; ci++) {
-      const cell = config.grid[minR + ri]?.[minC + ci];
+      const cell = config.grid[minR + ri]?.[minC + ci]?.[0];
       if (!cell || cell.type === '' || cell.type === 'O') continue;
       const cellX = ox + plateP + colX[ci] * scale + profilP / 2;
       const cellY = oy + plateP + rowY[ri] * scale + profilP / 2;
@@ -341,7 +341,7 @@ export function TechnicalDrawingView({ config }: { config: ConfigState }) {
       {/* Tiefe (diagonal) */}
       <Line x1={ox + dwW + 6} y1={oy} x2={ox + dwW + 20} y2={oy - 12}
         stroke={COL.dim} strokeWidth={0.4} />
-      <SvgText x={ox + dwW + 22} y={oy - 14} style={txtStyle(6.5)}>{`T: ${config.depth} mm`}</SvgText>
+      <SvgText x={ox + dwW + 22} y={oy - 14} style={txtStyle(6.5)}>{`T: ${config.depthLayers * 600} mm`}</SvgText>
 
       {/* Maßstab — direkt unter der Gesamtbreite, rechts */}
       <SvgText x={ox + dwW} y={dimYTotal + 8} style={{ ...txtStyle(5, '#999'), textAnchor: 'start' as const }}>

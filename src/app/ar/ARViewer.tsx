@@ -31,7 +31,7 @@ async function loadGLB(loader: GLTFLoader, url: string): Promise<THREE.Group> {
   return new Promise((resolve, reject) => {
     // Absolute URL noetig fuer AR-Seite (nicht relativ)
     const absUrl = url.startsWith('/') ? `${window.location.origin}${url}` : url;
-    loader.load(absUrl, (gltf) => resolve(gltf.scene), undefined, reject);
+    loader.load(absUrl, (gltf: { scene: THREE.Group }) => resolve(gltf.scene), undefined, reject);
   });
 }
 
@@ -91,27 +91,8 @@ function applyMaterial(
   });
 }
 
-// ── Effektive Farbe pro Bauteil: partColors > cellColors > catOverride > global
-function resolveColor(obj: SceneObject, config: ConfigState): string {
-  // 1. Individuelle Plattenfarbe (höchste Priorität)
-  if (config.partColors?.[obj.id]) return config.partColors[obj.id];
-
-  // 2. Element-Farbe (pro Zelle)
-  if (obj.row != null && obj.col != null) {
-    const cellHex = config.cellColors?.[`${obj.row}_${obj.col}`];
-    if (cellHex) return cellHex;
-  }
-
-  // 3. Kategorie-Override (BOM-Level)
-  if (obj.catKey) {
-    const catOv = config.catOverrides?.[obj.catKey];
-    if (catOv?.oberflaeche) {
-      const matDef = MAT_BY_V[catOv.oberflaeche];
-      if (matDef) return matDef.hex;
-    }
-  }
-
-  // 4. Fallback: globale Oberflächenfarbe (bereits in obj.color)
+// Lightmodul hat keine individuellen Farb-Overrides — immer obj.color verwenden
+function resolveColor(obj: SceneObject, _config: ConfigState): string {
   return obj.color;
 }
 
@@ -248,16 +229,15 @@ async function exportToGLB(scene: THREE.Scene): Promise<Blob> {
   return new Promise((resolve, reject) => {
     exporter.parse(
       scene,
-      (result) => {
+      (result: ArrayBuffer | object) => {
         if (result instanceof ArrayBuffer) {
           resolve(new Blob([result], { type: 'model/gltf-binary' }));
         } else {
-          // JSON-Format als Fallback (sollte nicht passieren bei binary: true)
           const json = JSON.stringify(result);
           resolve(new Blob([json], { type: 'model/gltf+json' }));
         }
       },
-      (error) => reject(error),
+      (error: unknown) => reject(error),
       { binary: true },
     );
   });

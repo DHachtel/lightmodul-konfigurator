@@ -5,7 +5,7 @@ import { computeBOM } from '@/core/calc';
 import { MultiOfferDocument } from '@/features/pdf/MultiOfferDocument';
 import type { OfferItem } from '@/features/pdf/MultiOfferDocument';
 import type { ConfigState } from '@/core/types';
-import { FOOTER_BY_V, HANDLES, MAT_BY_V } from '@/core/constants';
+import { FOOTER_BY_V } from '@/core/constants';
 import React from 'react';
 import QRCode from 'qrcode';
 import { MultiOfferRequestSchema, formatZodError } from '@/core/schemas';
@@ -81,7 +81,7 @@ function normalizeLabel(s: string): string {
   return s.toLowerCase().trim().replace(/\s+/g, ' ');
 }
 
-/** Gesamtpreis (Netto UVP) für eine Konfiguration berechnen */
+/** Gesamtpreis (Netto) fuer eine Lightmodul-Konfiguration berechnen */
 function computeNetPrice(
   config: ConfigState,
   bom: ReturnType<typeof computeBOM>,
@@ -90,58 +90,28 @@ function computeNetPrice(
   currency: 'EUR' | 'CHF',
 ): number {
   if (!bom) return 0;
-
-  const matObj = MAT_BY_V[config.surface];
-  const pg = matObj?.pg ?? 'PG1';
   let total = 0;
 
-  // Hilfsfunktion: Preis addieren
-  const add = (
-    row: ArticlePrice | undefined,
-    qty: number,
-    useMaterialPg: boolean,
-  ): void => {
+  const add = (row: ArticlePrice | undefined, qty: number): void => {
     if (qty <= 0 || !row) return;
-    const effectivePg = useMaterialPg ? pg : 'PG1';
-    const up = unitPrice(row, effectivePg, currency);
+    const up = unitPrice(row, 'PG1', currency);
     if (up !== null) total += up * qty;
   };
 
-  // Würfel
-  add(lookup(priceMap, 'Würfel 30mm'), bom.wuerfel, false);
+  // Wuerfel
+  add(lookup(priceMap, 'Wuerfel'), bom.wuerfel);
 
-  // Profile
-  const allProfiles: Record<string, number> = {};
-  for (const [len, qty] of Object.entries(bom.pB)) allProfiles[len] = (allProfiles[len] ?? 0) + qty;
-  for (const [len, qty] of Object.entries(bom.pH)) allProfiles[len] = (allProfiles[len] ?? 0) + qty;
-  for (const [len, qty] of Object.entries(bom.pT)) allProfiles[len] = (allProfiles[len] ?? 0) + qty;
-  for (const [len, qty] of Object.entries(allProfiles)) {
-    add(lookup(priceMap, 'Profil', Number(len)), qty, false);
-  }
+  // Profile (alle 600mm)
+  add(lookup(priceMap, 'Profil', 600), bom.profileTotal);
 
-  // Platten + Fronten — per Variante (Lightmodul: keine Board-Varianten)
-  const variants: { dim: string; kategorie: string; pg: string; qty: number }[] = [];
-  for (const v of variants) {
-    const [b, t] = parseDim(v.dim);
-    const row = lookup(priceMap, v.kategorie, b, t);
-    if (!row || v.qty <= 0) continue;
-    const up = unitPrice(row, v.pg, currency);
-    if (up !== null) total += up * v.qty;
-  }
+  // Einlegerahmen
+  add(lookup(priceMap, 'Einlegerahmen', 600), bom.framesStd);
+  add(lookup(priceMap, 'Einlegerahmen beleuchtet', 600), bom.framesLit);
 
-  // Griff
-  if (bom.frontGes > 0) {
-    const handleDef = HANDLES.find(h => h.v === config.handle);
-    if (handleDef) {
-      const nl = normalizeLabel(handleDef.l);
-      const griffRow = prices.find(
-        p => p.kategorie === 'Griff' && normalizeLabel(p.bezeichnung) === nl,
-      );
-      add(griffRow, bom.frontGes, false);
-    }
-  }
+  // Fachboeden
+  add(lookup(priceMap, 'Fachboden'), bom.shelves);
 
-  // Füße / Rollen
+  // Stellfuesse
   if (bom.footerQty > 0) {
     const footerDef = FOOTER_BY_V[config.footer];
     if (footerDef) {
@@ -149,15 +119,8 @@ function computeNetPrice(
       const footerRow =
         prices.find(p => String(p.art_nr) === String(footerDef.art_nr)) ??
         prices.find(p => normalizeLabel(p.bezeichnung) === nl);
-      add(footerRow, bom.footerQty, false);
+      add(footerRow, bom.footerQty);
     }
-  }
-
-  // Kabeldurchlass
-  const cableQty = Object.values(config.cableHoles ?? {}).filter(Boolean).length;
-  if (cableQty > 0) {
-    const cableRow = prices.find(p => String(p.art_nr) === '9001');
-    add(cableRow, cableQty, false);
   }
 
   return Math.round(total * 100) / 100;

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceSupabaseClient } from '@/lib/supabase/server';
 import { computeBOM } from '@/core/calc';
-import { MAT_BY_V } from '@/core/constants';
 import { buildBOMRowsExtended, generateXLSXBytes } from '@/features/bom/exportXLS';
 import type { ConfigState, BOMResult } from '@/core/types';
 import { requireAdmin, AdminAuthError } from '@/lib/admin-auth';
@@ -19,7 +18,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   }
   const { id } = await params;
   const code = parseInt(id, 10);
-  if (isNaN(code)) return NextResponse.json({ error: 'Ungültiger Code' }, { status: 400 });
+  if (isNaN(code)) return NextResponse.json({ error: 'Ungueltiger Code' }, { status: 400 });
 
   const sb = createServiceSupabaseClient();
   const { data, error } = await sb
@@ -35,19 +34,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
   if (!bom) return NextResponse.json({ error: 'BOM-Berechnung fehlgeschlagen' }, { status: 500 });
 
-  // Board-Varianten + BOM-Zeilen im selben Format wie der Konfigurator-Export
-  const variants: { kategorie: string; dim: string; surface: string; pg: string; qty: number; kabel: boolean; label: string; surfaceLabel: string; surfaceCode: string; hasCable: boolean }[] = [];
-  const globalMatObj = MAT_BY_V[config.surface];
-  const { rows, overrideRows } = buildBOMRowsExtended(
-    bom,
-    config.surface,
-    globalMatObj,
-    config.bomOverrides ?? {},
-    config.catOverrides ?? {},
-    variants,
-    null,           // kein priceLookup im Admin-Export
-    String(code),
-  );
+  const { rows, overrideRows } = buildBOMRowsExtended(bom, null, String(code));
 
   const xlsxBytes = generateXLSXBytes(rows, overrideRows);
 
