@@ -11,6 +11,7 @@ import * as THREE from 'three';
 interface ShapeLike {
   moveTo(x: number, y: number): void;
   lineTo(x: number, y: number): void;
+  quadraticCurveTo(cpX: number, cpY: number, x: number, y: number): void;
   closePath(): void;
   holes: PathLike[];
 }
@@ -1052,36 +1053,4 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
         )}
       </group>
 
-      {/* Auto-Framing — positioniert Kamera auf Möbel-BoundingBox */}
-      <CameraAutoFrame
-        ccRef={ccRef}
-        minX={boxMinX} minY={boxMinY} minZ={boxMinZ}
-        maxX={boxMaxX} maxY={boxMaxY} maxZ={boxMaxZ}
-      />
-      <CameraDrillZoom
-        ccRef={ccRef}
-        drillLevel={drillLevel}
-        selectedCell={selectedCell ?? null}
-        selectedPlateId={selectedPlateId ?? null}
-        objects={objects}
-        furnitureBounds={{ minX: boxMinX, minY: boxMinY, minZ: boxMinZ, maxX: boxMaxX, maxY: boxMaxY, maxZ: boxMaxZ }}
-      />
-    </Canvas>
-
-    {/* Radiales CSS-Shadow-Overlay unter dem Möbel */}
-    <div style={{
-      position: 'absolute',
-      bottom: '8%',
-      left: '50%',
-      transform: 'translateX(-50%)',
-      width: '60%',
-      height: '40px',
-      background: 'radial-gradient(ellipse, rgba(0,0,0,0.18) 0%, transparent 70%)',
-      filter: 'blur(8px)',
-      pointerEvents: 'none',
-    }} />
-  </div>
-  );
-});
-
-export default Preview3D;
+      {/* A

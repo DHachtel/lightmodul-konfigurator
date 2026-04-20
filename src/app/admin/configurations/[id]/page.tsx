@@ -1,4 +1,3 @@
-// @ts-nocheck — Artmodul-Legacydatei, wird in Phase 1 auf Lightmodul umgebaut
 'use client';
 
 import { use, useEffect, useState } from 'react';
@@ -61,46 +60,32 @@ export default function AdminConfigDetailPage({ params }: { params: Promise<{ id
   const c = config.config_json;
   const bom = config.bom_json;
 
-  // Maße berechnen (Profil-Rahmen: +30mm je Dimension)
-  const width = (c.cols ?? []).reduce((a, b) => a + b, 0) + 30;
-  const height = (c.rows ?? []).reduce((a, b) => a + b, 0) + 30;
-  const depth = (c.depth ?? 0) + 30;
+  // Maße berechnen
+  const width = (c.cols ?? []).reduce((a: number, b: number) => a + b, 0);
+  const height = (c.rows ?? []).reduce((a: number, b: number) => a + b, 0);
+  const depthMm = (c.depthLayers ?? 1) * 600;
 
-  // BOM-Summen aus DimMaps berechnen
-  const totalPlatten = bom
-    ? bom.plattenGes
-    : 0;
-  const totalProfile = bom
-    ? bom.pGes
-    : 0;
-  const totalFronten = bom
-    ? bom.frontGes
-    : 0;
-  const totalBeschlaege = bom
-    ? bom.beschlGes
-    : 0;
-  const totalFuesse = bom
-    ? bom.footerQty
-    : 0;
-  const totalWuerfel = bom
-    ? bom.wuerfel
-    : 0;
+  // BOM-Summen
+  const totalProfile = bom ? bom.profileTotal : 0;
+  const totalFrames = bom ? bom.framesTotal : 0;
+  const totalFuesse = bom ? bom.footerQty : 0;
+  const totalWuerfel = bom ? bom.wuerfel : 0;
+  const totalShelves = bom ? bom.shelves : 0;
 
   // KPI-Karten
   const kpis: KpiCard[] = [
-    { label: 'Raster', value: `${c.cols?.length ?? 0} × ${c.rows?.length ?? 0}` },
-    { label: 'Maße (mm)', value: `${width} × ${height} × ${depth}` },
-    { label: 'Oberfläche', value: c.surface ?? '—' },
-    { label: 'Tiefe', value: `${depth} mm` },
+    { label: 'Raster', value: `${c.cols?.length ?? 0} × ${c.rows?.length ?? 0} × ${c.depthLayers ?? 1}` },
+    { label: 'Maße (mm)', value: `${width} × ${height} × ${depthMm}` },
+    { label: 'Profilfarbe', value: c.profileColor ?? '—' },
+    { label: 'Tiefe', value: `${depthMm} mm` },
   ];
 
   // BOM-Übersicht
   const bomKpis: Array<{ label: string; value: number | string }> = [
     { label: 'Würfel', value: totalWuerfel },
-    { label: 'Platten', value: totalPlatten },
     { label: 'Profile', value: totalProfile },
-    { label: 'Fronten', value: totalFronten },
-    { label: 'Beschläge', value: totalBeschlaege },
+    { label: 'Rahmen', value: totalFrames },
+    { label: 'Fachböden', value: totalShelves },
     { label: 'Füße', value: totalFuesse },
   ];
 
@@ -166,7 +151,7 @@ export default function AdminConfigDetailPage({ params }: { params: Promise<{ id
       <div className="bg-white rounded-xl border border-[#EEEBE4] p-5">
         <div className="text-xs font-medium text-[#7A7670] uppercase tracking-wide mb-4">Stückliste (Zusammenfassung)</div>
         {bom ? (
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-4">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-4">
             {bomKpis.map(item => (
               <div key={item.label} className="text-center">
                 <div className="text-2xl font-semibold text-[#1C1A17]" style={{ fontVariantNumeric: 'tabular-nums' }}>

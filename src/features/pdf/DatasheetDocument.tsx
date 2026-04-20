@@ -241,8 +241,8 @@ interface Props {
 }
 
 export function DatasheetDocument({ config, bom, grandTotal = 0, currency = 'EUR', screenshot3d, moebelId }: Props) {
-  const matObj: { l: string; pg: string } | null = null; // Lightmodul hat keine Oberflaechen-Auswahl
-  const handleObj: { l: string } | null = null; // Lightmodul hat keine Griffe
+  const matObj = null as { l: string; pg: string } | null; // Lightmodul hat keine Oberflaechen-Auswahl
+  const handleObj = null as { l: string } | null; // Lightmodul hat keine Griffe
   const { totalW, totalH, activeCells } = getActiveDimensions(config);
   const ts = new Date().toLocaleDateString('de-DE');
 

@@ -9,7 +9,7 @@ import {
   StyleSheet,
 } from '@react-pdf/renderer';
 import type { BOMResult, ConfigState } from '@/core/types';
-import { HANDLE_BY_V, FOOTER_BY_V, MAT_BY_V } from '@/core/constants';
+import { FOOTER_BY_V } from '@/core/constants';
 import { TechnicalDrawingView } from './TechnicalDrawing';
 
 // Helvetica (built-in) — schlicht und klassisch, keine Font-Registrierung nötig
@@ -268,7 +268,7 @@ function describeFronts(config: ConfigState): string {
   for (const row of config.grid) {
     for (const colArr of row) {
       for (const cell of colArr) {
-        if (cell.type && cell.type !== '' && cell.type !== 'O') {
+        if (cell.type && cell.type !== 'O') {
           const label = cell.type === 'RF' ? 'Standard' : cell.type === 'RL' ? 'Beleuchtet' : cell.type;
           counts[label] = (counts[label] ?? 0) + 1;
         }
@@ -309,44 +309,12 @@ function buildBomDisplayItems(bom: BOMResult, config: ConfigState): BomDisplayIt
   if (bom.einlegemuttern > 0) items.push({ bezeichnung: 'Einlegemuttern', qty: bom.einlegemuttern });
 
   void config; // used for footer lookup below
-  addDimMap(bom.sIMapSY32, 'Seite innen SY32');
-  addDimMap(bom.fbMap, 'Fachboden');
 
-  // Fronten — pro Typ × Dimension
-  const frontLabels: Record<string, string> = {
-    K: 'Klappe',
-    S: 'Schublade',
-    TR: 'Tür rechts',
-    TL: 'Tür links',
-    DT: 'Doppeltür',
-  };
-  for (const [typ, m] of Object.entries(bom.fMap) as [string, Record<string, number>][]) {
-    for (const [dim, qty] of Object.entries(m))
-      if (qty > 0) items.push({ bezeichnung: `${frontLabels[typ] ?? typ} ${dim}mm`, qty, dim_key: dim });
-  }
-
-  // Griffe
-  if (bom.frontGes > 0) {
-    const hObj = HANDLE_BY_V[config.handle];
-    items.push({ bezeichnung: `Griff ${hObj?.l ?? config.handle}`, qty: bom.frontGes });
-  }
-
-  // Beschläge
-  if (bom.scharn > 0) items.push({ bezeichnung: 'Scharniere', qty: bom.scharn });
-  if (bom.kHalt > 0) items.push({ bezeichnung: 'Klappenhalter', qty: bom.kHalt });
-  if (bom.kDaem > 0) items.push({ bezeichnung: 'Klappendämpfer', qty: bom.kDaem });
-  if (bom.schubF > 0) items.push({ bezeichnung: 'Schubkastenführung', qty: bom.schubF });
-
-  // Füße/Rollen
+  // Stellfuesse
   if (bom.footerQty > 0) {
     const fObj = FOOTER_BY_V[config.footer];
     items.push({ bezeichnung: fObj?.l ?? config.footer, qty: bom.footerQty });
   }
-
-  // Kleinteile
-  if (bom.bolzen > 0)
-    items.push({ bezeichnung: 'Bolzen-Set (Sicherung + Gewinde + Maden + Verdrehsicherung)', qty: bom.bolzen });
-  if (bom.klemm > 0) items.push({ bezeichnung: 'Klemmsterne', qty: bom.klemm });
 
   return items;
 }
@@ -426,21 +394,21 @@ function CoverPage({
           const { totalW, totalH } = getActiveDimensions(item.config);
           const breite = totalW + 30;
           const hoehe = totalH + 30;
-          const tiefe = item.config.depth;
+          const tiefe = item.config.depthLayers * 600;
           const dimStr = `${breite}\u00D7${hoehe}\u00D7${tiefe}`;
 
-          const matObj = MAT_BY_V[item.config.surface];
-          const handleObj = HANDLE_BY_V[item.config.handle];
+          const matObj = null as { l: string; pg: string } | null;
+          const handleObj = null as { l: string } | null;
           const footerObj = FOOTER_BY_V[item.config.footer];
           const fronts = describeFronts(item.config);
           const overrides = describeOverrides(item.config);
 
-          // Fachböden zählen
+          // Fachboeden zaehlen (3D grid)
           const totalShelves = item.config.grid.reduce(
-            (sum, row) => sum + row.reduce((s, cell) => s + (cell.shelves ?? 0), 0), 0,
+            (sum, row) => sum + row.reduce((s, colArr) => s + colArr.reduce((ss, cell) => ss + (cell.shelves ?? 0), 0), 0), 0,
           );
-          // Kabeldurchlässe zählen
-          const totalCables = Object.values(item.config.cableHoles ?? {}).filter(Boolean).length;
+          // Lightmodul hat keine Kabeldurchlaesse
+          const totalCables = 0;
 
           // Detail-Zeilen zusammenstellen
           const detailParts: string[] = [];
@@ -525,7 +493,7 @@ function VisualPage({
   offerCode: number;
   ts: string;
 }) {
-  const matObj = MAT_BY_V[item.config.surface];
+  const matObj = null as { l: string; pg: string } | null;
   const { totalW, totalH, activeCells } = getActiveDimensions(item.config);
   const moebelIdStr = `#${String(item.configCode).padStart(8, '0')}`;
 
@@ -561,7 +529,7 @@ function VisualPage({
             {[
               { l: 'Breite', v: `${totalW + 30} mm` },
               { l: 'Höhe', v: `${totalH + 30} mm` },
-              { l: 'Tiefe', v: `${item.config.depth} mm` },
+              { l: 'Tiefe', v: `${item.config.depthLayers * 600} mm` },
               { l: 'Felder', v: `${activeCells}` },
               { l: 'Oberfläche', v: matObj?.l ?? 'Keine' },
             ].map(k => (

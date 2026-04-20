@@ -319,8 +319,8 @@ interface OfferDocumentProps {
 
 export function OfferDocument({ config, pricing, bom }: OfferDocumentProps) {
   const csym = pricing.currency === 'CHF' ? 'CHF' : '€';
-  const matObj: { l: string; pg: string } | null = null;
-  const handleObj: { l: string } | null = null;
+  const matObj = null as { l: string; pg: string } | null;
+  const handleObj = null as { l: string } | null;
   const footerObj = FOOTER_BY_V[config.footer];
 
   const totalW = bom.totalWidth;
