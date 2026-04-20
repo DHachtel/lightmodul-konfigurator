@@ -348,4 +348,6 @@ export function TechnicalDrawingView({ config }: { config: ConfigState }) {
         {`   Frontansicht · 1:${scaleRatio}`}
       </SvgText>
 
-   
+    </Svg>
+  );
+}

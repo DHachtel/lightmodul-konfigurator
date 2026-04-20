@@ -457,10 +457,16 @@ function ConfiguratorShellInner() {
         </div>
 
         {/* Mitte: Logo */}
-        <a href="https://www.artmodul.com" target="_blank" rel="noopener noreferrer"
-          style={{ position: 'absolute', left: '50%', bottom: 8, transform: 'translateX(-50%)', display: 'flex', alignItems: 'flex-end', textDecoration: 'none' }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/lightmodul-logo.png" alt="LIGHTMODUL by MHZ" style={{ height: 48, width: 'auto', filter: 'brightness(0) invert(1)' }} />
+        <a href="https://www.mhz.de" target="_blank" rel="noopener noreferrer"
+          style={{ position: 'absolute', left: '50%', bottom: 12, transform: 'translateX(-50%)', display: 'flex', alignItems: 'flex-end', textDecoration: 'none' }}>
+          <span style={{ fontSize: 22, fontWeight: 300, letterSpacing: '0.04em', color: '#fff' }}>
+            <span style={{ color: '#ccc' }}>MHZ</span>
+            {' '}
+            <span style={{ color: '#2dd4bf' }}>L</span>
+            <span style={{ color: '#ccc' }}>ight</span>
+            <span style={{ color: '#ef4444' }}>M</span>
+            <span style={{ color: '#ccc' }}>odul</span>
+          </span>
         </a>
 
         {/* Rechts: Aktions-Buttons */}

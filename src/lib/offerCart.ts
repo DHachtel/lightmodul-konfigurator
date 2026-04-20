@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'artmodul_offer_items';
+const STORAGE_KEY = 'lightmodul_offer_items';
 
 /** Einzelnes Warenkorb-Element mit Menge */
 export interface CartItem {

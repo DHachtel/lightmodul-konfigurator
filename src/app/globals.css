@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
-/* ── Artmodul Design Tokens ─────────────────────────────────────────────── */
+/* ── Lightmodul Design Tokens ────────────────────────────────────────────── */
 @theme {
   /* Markenfarben */
-  --color-primary:    #171614;   /* Artmodul Schwarz — Logo, Überschriften */
+  --color-primary:    #171614;   /* Lightmodul Schwarz — Logo, Überschriften */
   --color-accent:     #7A6448;   /* Bronze — sparsam einsetzen */
   --color-accent-l:   #B8A082;   /* Bronze hell */
   --color-accent-d:   #4E3E2A;   /* Bronze dunkel */

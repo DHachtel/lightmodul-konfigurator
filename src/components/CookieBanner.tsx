@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 
-const STORAGE_KEY = 'artmodul_cookie_ok';
+const STORAGE_KEY = 'lightmodul_cookie_ok';
 
 export default function CookieBanner() {
   // Lazy-Initialisierung: Banner nur anzeigen wenn kein Cookie gesetzt ist.

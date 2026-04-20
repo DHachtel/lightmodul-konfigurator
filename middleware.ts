@@ -28,7 +28,7 @@ export async function middleware(req: NextRequest) {
     || path.startsWith('/models/')       // GLB-3D-Modelle (für AR-Viewer)
 
   if (!isPublicRoute) {
-    const expectedUser = process.env.BETA_USER ?? 'artmodul'
+    const expectedUser = process.env.BETA_USER ?? 'lightmodul'
     const expectedPass = process.env.BETA_PASSWORD ?? ''
 
     if (!expectedPass) {

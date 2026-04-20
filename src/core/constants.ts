@@ -83,9 +83,9 @@ export const PG_DOT: Record<string, string> = {
   '—': 'transparent',
 };
 
-// ─── Artmodul-Kompatibilitätsstubs (werden in Phase 1 entfernt) ───────────────
-// Diese Exports existieren nur damit Artmodul-Komponenten kompilieren, bevor
-// sie auf Lightmodul-Logik umgebaut werden. Nicht für neue Features verwenden.
+// ─── Kompatibilitätsstubs (werden in Phase 3/4 entfernt) ─────────────────────
+// Diese Exports existieren nur damit Preview3D-Komponenten kompilieren, bevor
+// sie auf GLB-basierte Lightmodul-Geometrie umgebaut werden.
 
 /** @deprecated Artmodul-Oberflächen — kein Äquivalent in Lightmodul */
 export const MATERIALS: Material[] = PROFILE_COLORS;
