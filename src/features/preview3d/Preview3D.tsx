@@ -169,11 +169,11 @@ function FacePlusButton({ position, rotation, onClick }: {
   onClick: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
-  const size = ELEMENT_SIZE_MM * 0.6 * S; // 360mm Plane
+  const size = ELEMENT_SIZE_MM * 0.85 * S; // 510mm Hover-Fläche (fast ganze Zellseite)
 
   return (
     <group position={position} rotation={rotation}>
-      {/* Unsichtbare Hover-Fläche */}
+      {/* Große unsichtbare Hover-Fläche — fängt Maus-Events */}
       <mesh
         onPointerOver={(e) => { e.stopPropagation(); setHovered(true); }}
         onPointerOut={() => setHovered(false)}
@@ -181,24 +181,26 @@ function FacePlusButton({ position, rotation, onClick }: {
       >
         <planeGeometry args={[size, size]} />
         <meshBasicMaterial
-          color="#888888"
+          color="#999999"
           transparent
-          opacity={hovered ? 0.25 : 0.0}
+          opacity={hovered ? 0.18 : 0.0}
           side={THREE.DoubleSide}
           depthWrite={false}
         />
       </mesh>
-      {/* "+" Label */}
-      <Html center style={{ pointerEvents: 'none' }}>
-        <div style={{
-          width: 28, height: 28, borderRadius: '50%',
-          background: hovered ? 'rgba(23,22,20,0.65)' : 'rgba(23,22,20,0.25)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: '#fff', fontSize: 16, fontWeight: 300,
-          transition: 'all 0.15s ease',
-          userSelect: 'none',
-        }}>+</div>
-      </Html>
+      {/* "+" nur bei Hover sichtbar */}
+      {hovered && (
+        <Html center style={{ pointerEvents: 'none' }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: '50%',
+            background: 'rgba(23,22,20,0.7)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#fff', fontSize: 18, fontWeight: 300,
+            userSelect: 'none',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          }}>+</div>
+        </Html>
+      )}
     </group>
   );
 }
