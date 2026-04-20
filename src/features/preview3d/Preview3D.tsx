@@ -792,33 +792,48 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
     }
 
     // ── 2. RAND-Erweiterung: Links, Rechts, Oben ──────────────────────────
-    // Für jede aktive Zelle am jeweiligen Rand prüfen
+    // Schwerkraft bottom-up: eine Rand-Zelle hat Support wenn sie in der
+    // Bodenzeile ist, ODER die Zelle darunter in der selben neuen Spalte
+    // ebenfalls ein Phantom bekommen würde.
     if (nC < MAX_COLS) {
+      // LINKS: bottom-up Support-Kette aufbauen
+      const leftOK: boolean[] = Array(nR).fill(false);
+      for (let r = nR - 1; r >= 0; r--) {
+        if (!isActive(r, 0)) continue; // kein Nachbar rechts → kein Phantom
+        const support = r === nR - 1 || leftOK[r + 1];
+        if (support) leftOK[r] = true;
+      }
       for (let r = 0; r < nR; r++) {
-        // LINKS: Zelle bei col=0 aktiv → Phantom bei col=-1
-        if (isActive(r, 0) && hasSupportAt(r, 0)) {
-          phantoms.push({
-            id: `ph_left_${r}`,
-            position: [(xBase - sEl / 2) * S, (yBase + (nR - r - 0.5) * sEl) * S, (zBase + totalD / 2) * S],
-            size: [boxSide, boxSide, boxDepth],
-            targetRow: r, targetCol: -1,
-            action: 'expandLeft',
-          });
-        }
-        // RECHTS: Zelle bei col=nC-1 aktiv → Phantom bei col=nC
-        if (isActive(r, nC - 1) && hasSupportAt(r, nC - 1)) {
-          phantoms.push({
-            id: `ph_right_${r}`,
-            position: [(xBase + totalW + sEl / 2) * S, (yBase + (nR - r - 0.5) * sEl) * S, (zBase + totalD / 2) * S],
-            size: [boxSide, boxSide, boxDepth],
-            targetRow: r, targetCol: nC,
-            action: 'expandRight',
-          });
-        }
+        if (!leftOK[r]) continue;
+        phantoms.push({
+          id: `ph_left_${r}`,
+          position: [(xBase - sEl / 2) * S, (yBase + (nR - r - 0.5) * sEl) * S, (zBase + totalD / 2) * S],
+          size: [boxSide, boxSide, boxDepth],
+          targetRow: r, targetCol: -1,
+          action: 'expandLeft',
+        });
+      }
+
+      // RECHTS: bottom-up Support-Kette aufbauen
+      const rightOK: boolean[] = Array(nR).fill(false);
+      for (let r = nR - 1; r >= 0; r--) {
+        if (!isActive(r, nC - 1)) continue;
+        const support = r === nR - 1 || rightOK[r + 1];
+        if (support) rightOK[r] = true;
+      }
+      for (let r = 0; r < nR; r++) {
+        if (!rightOK[r]) continue;
+        phantoms.push({
+          id: `ph_right_${r}`,
+          position: [(xBase + totalW + sEl / 2) * S, (yBase + (nR - r - 0.5) * sEl) * S, (zBase + totalD / 2) * S],
+          size: [boxSide, boxSide, boxDepth],
+          targetRow: r, targetCol: nC,
+          action: 'expandRight',
+        });
       }
     }
 
-    // OBEN: Zelle bei row=0 aktiv → Phantom bei row=-1 (Support immer gegeben: darunter ist row=0)
+    // OBEN: Zelle bei row=0 aktiv → Phantom darüber (Support = row=0 darunter)
     if (nR < MAX_ROWS) {
       for (let c = 0; c < nC; c++) {
         if (!isActive(0, c)) continue;
@@ -831,8 +846,6 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
         });
       }
     }
-
-    // Tiefe-Erweiterung: vorerst deaktiviert (wird global gesteuert, nicht per Einzelzelle)
 
     return phantoms;
   }, [state.grid, state.cols, state.rows, state.depthLayers]);
