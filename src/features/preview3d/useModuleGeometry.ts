@@ -111,6 +111,15 @@ export function computeModuleGeometry(state: ConfigState): SceneObject[] {
   // BT-Knoten-Reihe: BTs sitzen immer in der untersten Reihe (r = nR-1)
   const btRk = nR - 1;
 
+  // Hilfsfunktion: naechste aktive Zelle zu einem Knoten (fuer Drill-Down-Klick)
+  const nearestCell = (rk: number, ck: number, dk: number): { row: number; col: number; depth: number } | null => {
+    for (let r = Math.max(0, rk - 1); r <= Math.min(nR - 1, rk); r++)
+      for (let c = Math.max(0, ck - 1); c <= Math.min(nC - 1, ck); c++)
+        for (let d = Math.max(0, dk - 1); d <= Math.min(nD - 1, dk); d++)
+          if (isActive(r, c, d)) return { row: r, col: c, depth: d };
+    return null;
+  };
+
   // ── Würfel (an jedem aktiven Knoten) ──────────────────────────────────────
   for (let rk = 0; rk <= nR; rk++) {
     for (let ck = 0; ck <= nC; ck++) {
@@ -123,12 +132,16 @@ export function computeModuleGeometry(state: ConfigState): SceneObject[] {
         const wy = yBase + (nR - rk) * S;
         const wz = zBase + dk * S;
 
+        const nc = nearestCell(rk, ck, dk);
         objs.push({
           id:       `wuerfel_rk${rk}_ck${ck}_dk${dk}`,
           partType: 'wuerfel',
           position: [wx * s, wy * s, wz * s],
           size:     [C * s, C * s, C * s],
           color:    matColor,
+          row:      nc?.row,
+          col:      nc?.col,
+          depth:    nc?.depth,
           roughness: 0.3,
           metalness: 0.7,
         });
@@ -147,12 +160,16 @@ export function computeModuleGeometry(state: ConfigState): SceneObject[] {
         const wy = yBase + (nR - rk) * S;
         const wz = zBase + dk * S;
 
+        const ncX = nearestCell(rk, ck, dk);
         objs.push({
           id:       `pB_${profIdx++}`,
           partType: 'profil',
           position: [wx * s, wy * s, wz * s],
           size:     [(S - C) * s, P * s, P * s], // Profil zwischen zwei Würfeln
           color:    matColor,
+          row:      ncX?.row,
+          col:      ncX?.col,
+          depth:    ncX?.depth,
           roughness: 0.2,
           metalness: 0.8,
         });
@@ -181,12 +198,16 @@ export function computeModuleGeometry(state: ConfigState): SceneObject[] {
         const wy = yBase + (nR - rk) * S - S / 2;
         const wz = zBase + dk * S;
 
+        const ncY = nearestCell(rk, ck, dk);
         objs.push({
           id:       `pH_${profIdx++}`,
           partType: 'profil',
           position: [wx * s, wy * s, wz * s],
           size:     [P * s, (S - C) * s, P * s],
           color:    matColor,
+          row:      ncY?.row,
+          col:      ncY?.col,
+          depth:    ncY?.depth,
           roughness: 0.2,
           metalness: 0.8,
         });
@@ -204,12 +225,16 @@ export function computeModuleGeometry(state: ConfigState): SceneObject[] {
         const wy = yBase + (nR - rk) * S;
         const wz = zBase + dk * S + S / 2;
 
+        const ncZ = nearestCell(rk, ck, dk);
         objs.push({
           id:       `pT_${profIdx++}`,
           partType: 'profil',
           position: [wx * s, wy * s, wz * s],
           size:     [P * s, P * s, (S - C) * s],
           color:    matColor,
+          row:      ncZ?.row,
+          col:      ncZ?.col,
+          depth:    ncZ?.depth,
           roughness: 0.2,
           metalness: 0.8,
         });

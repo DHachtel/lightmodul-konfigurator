@@ -915,7 +915,7 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
     [objects], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const profilObjs = useMemo(
-    () => objects.filter(o => o.partType === 'profil'),
+    () => objects.filter(o => o.partType === 'profil' || o.partType === 'profil360' || o.partType === 'profil213'),
     [objects],
   );
   const handleObjs = useMemo(
@@ -1046,6 +1046,9 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
               envMapIntensity={0.9}
               preRotation={obj.preRotation}
               nonUniformScale={obj.nonUniformScale}
+              onClick={obj.row != null && obj.col != null && onMeshClick
+                ? (e) => { e.stopPropagation(); onMeshClick(obj.row!, obj.col!); }
+                : undefined}
             />
           ))}
         </group>
@@ -1089,6 +1092,9 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
               envMapIntensity={0.9}
               preRotation={obj.preRotation}
               nonUniformScale={obj.nonUniformScale}
+              onClick={obj.row != null && obj.col != null && onMeshClick
+                ? (e) => { e.stopPropagation(); onMeshClick(obj.row!, obj.col!); }
+                : undefined}
             />
           ))}
         </group>
