@@ -120,6 +120,79 @@ export function computeBOM(config: ConfigState): BOMResult | null {
 
   const framesTotal = framesStd + framesLit;
 
+  // ── Beratungstisch-Bauteile ─────────────────────────────────────────────
+  let fachbodenBT = 0;
+  let profil360 = 0;
+  let profil213 = 0;
+  let wuerfelBT = 0;
+  let worktopProfileX = 0;
+  let worktopProfileZ = 0;
+
+  const isBT = (r: number, c: number, d: number): boolean =>
+    (grid[r]?.[c]?.[d]?.type ?? '') === 'BT';
+
+  // Zaehle BT-Zellen
+  for (let r = 0; r < nR; r++)
+    for (let c = 0; c < nC; c++)
+      for (let d = 0; d < nD; d++) {
+        if (!isBT(r, c, d)) continue;
+        fachbodenBT++;
+      }
+
+  if (fachbodenBT > 0) {
+    // Worktop-Knoten: aktiv wenn mind. eine angrenzende Zelle BT ist
+    const btNodeActive = (rk: number, ck: number, dk: number): boolean => {
+      for (let r2 = Math.max(0, rk - 1); r2 <= Math.min(nR - 1, rk); r2++)
+        for (let c2 = Math.max(0, ck - 1); c2 <= Math.min(nC - 1, ck); c2++)
+          for (let d2 = Math.max(0, dk - 1); d2 <= Math.min(nD - 1, dk); d2++)
+            if (isBT(r2, c2, d2)) return true;
+      return false;
+    };
+
+    // Zwischenwuerfel (Worktop-Niveau)
+    for (let rk = 0; rk <= nR; rk++)
+      for (let ck = 0; ck <= nC; ck++)
+        for (let dk = 0; dk <= nD; dk++)
+          if (btNodeActive(rk, ck, dk)) wuerfelBT++;
+
+    // Worktop horizontale Profile X-Richtung
+    for (let rk = 0; rk <= nR; rk++)
+      for (let ck = 0; ck < nC; ck++)
+        for (let dk = 0; dk <= nD; dk++)
+          if (btNodeActive(rk, ck, dk) && btNodeActive(rk, ck + 1, dk))
+            worktopProfileX++;
+
+    // Worktop horizontale Profile Z-Richtung
+    for (let rk = 0; rk <= nR; rk++)
+      for (let ck = 0; ck <= nC; ck++)
+        for (let dk = 0; dk < nD; dk++)
+          if (btNodeActive(rk, ck, dk) && btNodeActive(rk, ck, dk + 1))
+            worktopProfileZ++;
+
+    // 360mm-Profile: je BT-Worktop-Knoten der auch ein Basis-Knoten ist
+    for (let rk = 0; rk <= nR; rk++)
+      for (let ck = 0; ck <= nC; ck++)
+        for (let dk = 0; dk <= nD; dk++)
+          if (btNodeActive(rk, ck, dk) && nodeActive(rk, ck, dk))
+            profil360++;
+
+    // 213mm-Profile: nur wo ueber dem BT ein regulaeres Modul existiert
+    for (let rk = 0; rk <= nR; rk++)
+      for (let ck = 0; ck <= nC; ck++)
+        for (let dk = 0; dk <= nD; dk++) {
+          if (!btNodeActive(rk, ck, dk)) continue;
+          if (rk > 0 && nodeActive(rk - 1, ck, dk) && nodeActive(rk, ck, dk)) {
+            let hasRegularAbove = false;
+            for (let r2 = Math.max(0, rk - 2); r2 <= Math.min(nR - 1, rk - 1); r2++)
+              for (let c2 = Math.max(0, ck - 1); c2 <= Math.min(nC - 1, ck); c2++)
+                for (let d2 = Math.max(0, dk - 1); d2 <= Math.min(nD - 1, dk); d2++)
+                  if (isActive(grid[r2]?.[c2]?.[d2] ?? { type: '' as CellType, shelves: 0 }) && !isBT(r2, c2, d2))
+                    hasRegularAbove = true;
+            if (hasRegularAbove) profil213++;
+          }
+        }
+  }
+
   // ── Fachböden ──────────────────────────────────────────────────────────────
   let shelves = 0;
   for (let r = 0; r < nR; r++)
@@ -138,12 +211,6 @@ export function computeBOM(config: ConfigState): BOMResult | null {
       for (let dk = 0; dk <= nD; dk++)
         if (nodeActive(nR, ck, dk)) footerQty++;
   }
-
-  // ── Verbindungshardware ────────────────────────────────────────────────────
-  const schraubenM4    = wuerfel * HW_M4_PER_CUBE;
-  const einlegemuttern = wuerfel * HW_MUTTERN_PER_CUBE;
-  const schraubenM6    = wuerfel * HW_M6_PER_CUBE;
-  const scheiben       = wuerfel * HW_SCHEIBEN_PER_CUBE;
 
   // ── Board-Map ─────────────────────────────────────────────────────────────
   const boardMap: BOMResult['boardMap'] = {};
@@ -171,8 +238,13 @@ export function computeBOM(config: ConfigState): BOMResult | null {
     profileX, profileY, profileZ, profileTotal,
     framesStd, framesLit, framesTotal,
     shelves,
+    profil360, profil213, fachbodenBT, wuerfelBT,
+    worktopProfileX, worktopProfileZ,
     footerQty, footer,
-    schraubenM4, schraubenM6, scheiben, einlegemuttern,
+    schraubenM4: (wuerfel + wuerfelBT) * HW_M4_PER_CUBE,
+    schraubenM6: (wuerfel + wuerfelBT) * HW_M6_PER_CUBE,
+    scheiben: (wuerfel + wuerfelBT) * HW_SCHEIBEN_PER_CUBE,
+    einlegemuttern: (wuerfel + wuerfelBT) * HW_MUTTERN_PER_CUBE,
     numCols: nC, numRows: nR, numDepth: nD,
     totalWidth: nC * S, totalHeight: nR * S, totalDepth: nD * S,
     boardMap,
