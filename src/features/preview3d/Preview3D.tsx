@@ -841,12 +841,37 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
   // Phantom Element Klick-Handler — true 3D
   const handlePhantomClick = useCallback((phantom: PhantomPos) => {
     const { targetRow, targetCol, targetDepth, action } = phantom;
-    if (action === 'internal') {
-      onSetCellType3D?.(targetRow, targetCol, targetDepth, placementType);
-    } else {
-      onExpandAndActivate3D?.(targetRow, targetCol, targetDepth, placementType);
+    const nR = state.rows.length;
+
+    if (placementType === 'BT') {
+      // BT-Modus: Phantom ueber bestehendem Element → konvertiere das Element darunter zu BT
+      // (statt ein neues Element oben zu erstellen)
+      if (targetRow < 0) {
+        // Expansion nach oben → konvertiere die oberste aktive Zelle in dieser Spalte
+        onSetCellType3D?.(0, targetCol, targetDepth, 'BT');
+        return;
+      }
+      if (targetRow < nR - 1) {
+        // Internes Phantom ueber der untersten Reihe → konvertiere die Zelle in der untersten Reihe
+        onSetCellType3D?.(nR - 1, targetCol, targetDepth, 'BT');
+        return;
+      }
+      // Unterste Reihe: normal platzieren
+      if (action === 'internal') {
+        onSetCellType3D?.(targetRow, targetCol, targetDepth, 'BT');
+      } else {
+        onExpandAndActivate3D?.(targetRow, targetCol, targetDepth, 'BT');
+      }
+      return;
     }
-  }, [onSetCellType3D, onExpandAndActivate3D, placementType]);
+
+    // Standard-Modus (Wuerfel)
+    if (action === 'internal') {
+      onSetCellType3D?.(targetRow, targetCol, targetDepth, 'O');
+    } else {
+      onExpandAndActivate3D?.(targetRow, targetCol, targetDepth);
+    }
+  }, [onSetCellType3D, onExpandAndActivate3D, placementType, state.rows.length]);
 
   // ── Remove Buttons: 1 × pro entfernbarem Element, am nächsten Außenrand ──
   const cellButtons = useMemo(() => {
