@@ -310,6 +310,7 @@ export default function BOMPanel({ state, committedBOM, moebelId, onCommit, capt
             { id: 'shelves',  v: bom.shelves,       l: 'Fachboeden'     },
             { id: 'fuesse',   v: bom.footerQty,     l: 'Stellfuesse'    },
             { id: 'hardware', v: bom.schraubenM4 + bom.schraubenM6 + bom.scheiben + bom.einlegemuttern, l: 'Hardware' },
+            ...(bom.fachbodenBT > 0 ? [{ id: 'bt', v: bom.fachbodenBT, l: 'Beratungstische' }] : []),
           ].map(c => (
             <div key={c.id} className="border border-gray-100 rounded-lg p-4 bg-white shadow-sm hover:shadow-md transition-shadow duration-200 text-center">
               <span className="text-3xl font-bold tracking-tight text-gray-900 block leading-none">
@@ -388,6 +389,25 @@ export default function BOMPanel({ state, committedBOM, moebelId, onCommit, capt
             pi={pr('Stellfuesse', undefined, bom.footerQty)}
           />
         </Group>
+
+        {bom.fachbodenBT > 0 && (
+          <Group title="Beratungstisch" total={bom.fachbodenBT + bom.profil360 + bom.profil213 + bom.wuerfelBT + bom.worktopProfileX + bom.worktopProfileZ} csym={csym}>
+            <BRow name="Arbeitsplatte (Fachboden)" sub="" qty={bom.fachbodenBT} csym={csym}
+              pi={pr('BT_Fachboden', undefined, bom.fachbodenBT)} />
+            <BRow name="Profil 360mm" sub="" qty={bom.profil360} csym={csym}
+              pi={pr('BT_Profil', '360', bom.profil360)} />
+            {bom.profil213 > 0 && (
+              <BRow name="Profil 213mm" sub="" qty={bom.profil213} csym={csym}
+                pi={pr('BT_Profil', '213', bom.profil213)} />
+            )}
+            <BRow name="Worktop-Profile X" sub="600mm" qty={bom.worktopProfileX} csym={csym}
+              pi={pr('BT_Profil', '600', bom.worktopProfileX)} />
+            <BRow name="Worktop-Profile Z" sub="600mm" qty={bom.worktopProfileZ} csym={csym}
+              pi={pr('BT_Profil', '600', bom.worktopProfileZ)} />
+            <BRow name="Zwischenwuerfel" sub="" qty={bom.wuerfelBT} csym={csym}
+              pi={pr('BT_Wuerfel', undefined, bom.wuerfelBT)} />
+          </Group>
+        )}
 
         {/* -- Preisberechnung -- */}
         <PriceSection pricing={pricing} loading={priceLoading} />
