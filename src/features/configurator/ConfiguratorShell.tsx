@@ -19,7 +19,6 @@ import type { CellType, ConfigState } from '@/core/types';
 // GhostSide nicht mehr benötigt — Ghost Zones arbeiten jetzt zellbasiert
 import SidebarMoebel from './SidebarMoebel';
 import SidebarElement from './SidebarElement';
-import SidebarPlatte from './SidebarPlatte';
 
 /** Gesamttiefe in mm (Rastermaß × Ebenen + Profil-Überhang) */
 function totalDepthMM(state: ConfigState): number {
@@ -402,7 +401,6 @@ function ConfiguratorShellInner() {
           onMiss={drillActions.handleMiss}
           drillLevel={drill.level}
           selectedCell={drill.selectedCell}
-          selectedPlateId={drill.selectedPlateId}
           onGhostClick={handleAddCell}
           onExpandAndAdd={handleExpandAndAdd}
           onRemoveElement={handleRemoveElement}
@@ -418,7 +416,6 @@ function ConfiguratorShellInner() {
         <Breadcrumb
           level={drill.level}
           selectedCell={drill.selectedCell}
-          selectedPlateType={drill.selectedPlateType}
           onGoToLevel={drillActions.goToLevel}
         />
       </div>
@@ -945,7 +942,7 @@ function ConfiguratorShellInner() {
           NEU BUTTON — oben links
           ════════════════════════════════════════ */}
       <button
-        onClick={() => { if (confirm('Konfiguration zurücksetzen?')) { resetConfig(); drillActions.goToLevel('moebel'); } }}
+        onClick={() => { if (confirm('Konfiguration zurücksetzen?')) { resetConfig(); drillActions.goToLevel('shop'); } }}
         style={{ ...TOOLBAR_BTN, top: 108 }}
         onMouseEnter={(e) => { e.currentTarget.style.color = '#171614'; }}
         onMouseLeave={(e) => { e.currentTarget.style.color = '#6A6660'; }}
@@ -960,7 +957,7 @@ function ConfiguratorShellInner() {
       <button
         onClick={() => {
           preview3DRef.current?.resetCamera();
-          drillActions.goToLevel('moebel');
+          drillActions.goToLevel('shop');
         }}
         style={{ ...TOOLBAR_BTN, top: 146 }}
         onMouseEnter={(e) => { e.currentTarget.style.color = '#171614'; }}
@@ -1058,9 +1055,7 @@ function ConfiguratorShellInner() {
         overflowX: 'hidden',
       }}>
         <div style={{ flex: 1, overflowY: 'auto' }}>
-          {drill.level === 'platte' && drill.selectedPlateId && drill.selectedPlateType ? (
-            <SidebarPlatte state={state} actions={actions} plateId={drill.selectedPlateId} plateType={drill.selectedPlateType} />
-          ) : drill.level === 'element' && drill.selectedCell ? (
+          {drill.level === 'produktrahmen' && drill.selectedCell ? (
             <SidebarElement state={state} actions={actions} row={drill.selectedCell.row} col={drill.selectedCell.col} />
           ) : (
             <SidebarMoebel state={state} actions={actions} pgAvail={pgAvail} placementType={placementType} onPlacementTypeChange={setPlacementType} />

@@ -5,15 +5,8 @@ import type { DrillLevel } from './useDrillDown';
 interface BreadcrumbProps {
   level: DrillLevel;
   selectedCell: { row: number; col: number } | null;
-  selectedPlateType: string | null;
   onGoToLevel: (level: DrillLevel) => void;
 }
-
-const PART_LABELS: Record<string, string> = {
-  seite_l: 'Seite L', seite_r: 'Seite R',
-  boden: 'Boden', deckel: 'Deckel', ruecken: 'Rückwand',
-  zwischenboden: 'Zwischenboden', zwischenwand: 'Zwischenwand', front: 'Front',
-};
 
 type NavItem = {
   label: string;
@@ -22,33 +15,14 @@ type NavItem = {
   reachable: boolean;
 };
 
-export default function Breadcrumb({ level, selectedCell, selectedPlateType, onGoToLevel }: BreadcrumbProps) {
+export default function Breadcrumb({ level, selectedCell, onGoToLevel }: BreadcrumbProps) {
   const elementLabel = selectedCell
-    ? `Element R${selectedCell.row + 1}·C${selectedCell.col + 1}`
-    : 'Element';
-  const platteLabel = selectedPlateType
-    ? (PART_LABELS[selectedPlateType] ?? selectedPlateType)
-    : 'Platte';
+    ? `R${selectedCell.row + 1}/C${selectedCell.col + 1}`
+    : 'Produktrahmen';
 
   const items: NavItem[] = [
-    {
-      label: 'Möbel',
-      level: 'moebel',
-      active: level === 'moebel',
-      reachable: true,
-    },
-    {
-      label: elementLabel,
-      level: 'element',
-      active: level === 'element',
-      reachable: selectedCell !== null,
-    },
-    {
-      label: platteLabel,
-      level: 'platte',
-      active: level === 'platte',
-      reachable: selectedPlateType !== null,
-    },
+    { label: 'Shop', level: 'shop' as DrillLevel, active: level === 'shop', reachable: true },
+    { label: elementLabel, level: 'produktrahmen' as DrillLevel, active: level === 'produktrahmen', reachable: !!selectedCell },
   ];
 
   return (
@@ -77,7 +51,7 @@ export default function Breadcrumb({ level, selectedCell, selectedPlateType, onG
               margin: '0 8px',
               color: '#C0BCB6',
               fontSize: 10,
-            }}>›</span>
+            }}>&rsaquo;</span>
           )}
           <button
             onClick={() => item.reachable && !item.active && onGoToLevel(item.level)}

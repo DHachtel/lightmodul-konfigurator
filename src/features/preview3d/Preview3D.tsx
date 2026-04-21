@@ -137,30 +137,6 @@ function SelectionHighlight({
   );
 }
 
-// ── PlateHighlight — grüner Rahmen um eine einzeln selektierte Platte ────────
-
-function PlateHighlight({
-  objects,
-  plateId,
-}: {
-  objects: SceneObject[];
-  plateId: string;
-}) {
-  const obj = useMemo(
-    () => objects.find(o => o.id === plateId),
-    [objects, plateId],
-  );
-  if (!obj) return null;
-
-  return (
-    <mesh position={obj.position}>
-      <boxGeometry args={obj.size} />
-      <meshBasicMaterial visible={false} />
-      <Edges color="#4ade80" linewidth={2} />
-    </mesh>
-  );
-}
-
 // ── PhantomElement — Ghost-Box für Grid-Erweiterung ──────────────────────────
 
 function PhantomElement({ position, size, onClick }: {
@@ -563,14 +539,12 @@ function CameraDrillZoom({
   ccRef,
   drillLevel,
   selectedCell,
-  selectedPlateId,
   objects,
   furnitureBounds,
 }: {
   ccRef: React.MutableRefObject<CameraControlsImpl | null>;
-  drillLevel: 'moebel' | 'element' | 'platte';
+  drillLevel: 'shop' | 'produktrahmen';
   selectedCell: { row: number; col: number } | null;
-  selectedPlateId: string | null;
   objects: SceneObject[];
   furnitureBounds: { minX: number; minY: number; minZ: number; maxX: number; maxY: number; maxZ: number };
 }) {
@@ -588,14 +562,14 @@ function CameraDrillZoom({
 
     if (!levelChanged && !cellChanged) return;
 
-    if (drillLevel === 'moebel') {
+    if (drillLevel === 'shop') {
       const box = new THREE.Box3(
         new THREE.Vector3(furnitureBounds.minX, furnitureBounds.minY, furnitureBounds.minZ),
         new THREE.Vector3(furnitureBounds.maxX, furnitureBounds.maxY, furnitureBounds.maxZ),
       );
       const pad = Math.max(box.max.x - box.min.x, box.max.y - box.min.y) * 0.6;
       cc.fitToBox(box, true, { paddingLeft: pad, paddingRight: pad, paddingTop: pad, paddingBottom: pad });
-    } else if (drillLevel === 'element' && selectedCell) {
+    } else if (drillLevel === 'produktrahmen' && selectedCell) {
       const matched = objects.filter(o => o.row === selectedCell.row && o.col === selectedCell.col);
       if (matched.length === 0) return;
       const box = new THREE.Box3();
@@ -606,18 +580,8 @@ function CameraDrillZoom({
       }
       const pad = Math.max(box.max.x - box.min.x, box.max.y - box.min.y) * 0.4;
       cc.fitToBox(box, true, { paddingLeft: pad, paddingRight: pad, paddingTop: pad, paddingBottom: pad });
-    } else if (drillLevel === 'platte' && selectedPlateId) {
-      const obj = objects.find(o => o.id === selectedPlateId);
-      if (!obj) return;
-      const hw = obj.size[0] / 2, hh = obj.size[1] / 2, hd = obj.size[2] / 2;
-      const box = new THREE.Box3(
-        new THREE.Vector3(obj.position[0] - hw, obj.position[1] - hh, obj.position[2] - hd),
-        new THREE.Vector3(obj.position[0] + hw, obj.position[1] + hh, obj.position[2] + hd),
-      );
-      const pad = Math.max(box.max.x - box.min.x, box.max.y - box.min.y) * 0.3;
-      cc.fitToBox(box, true, { paddingLeft: pad, paddingRight: pad, paddingTop: pad, paddingBottom: pad });
     }
-  }, [ccRef, drillLevel, selectedCell, selectedPlateId, objects, furnitureBounds]);
+  }, [ccRef, drillLevel, selectedCell, objects, furnitureBounds]);
 
   return null;
 }
@@ -634,9 +598,8 @@ interface Preview3DProps {
   /** Klick ins Leere */
   onMiss?: () => void;
   /** Drill-Down Level — steuert Highlight-Verhalten */
-  drillLevel?: 'moebel' | 'element' | 'platte';
+  drillLevel?: 'shop' | 'produktrahmen';
   selectedCell?: { row: number; col: number } | null;
-  selectedPlateId?: string | null;
   /** Ghost Zone: Zelle hinzufuegen (row, col) — fuer interne leere Zellen */
   onGhostClick?: (row: number, col: number) => void;
   /** Grid erweitern und Zelle hinzufuegen (Rand-Ghost-Zones) */
@@ -670,9 +633,8 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
   onPlateClick,
   onMeshClick,
   onMiss,
-  drillLevel = 'moebel',
+  drillLevel = 'shop',
   selectedCell,
-  selectedPlateId,
   onGhostClick,
   onExpandAndAdd,
   onRemoveElement,
@@ -1102,11 +1064,8 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
       </Suspense>
 
       {/* Grüner Highlight-Rahmen — je nach Drill-Down-Ebene */}
-      {selectedCell && drillLevel !== 'platte' && (
+      {selectedCell && drillLevel === 'produktrahmen' && (
         <SelectionHighlight objects={objects} row={selectedCell.row} col={selectedCell.col} />
-      )}
-      {selectedPlateId && drillLevel === 'platte' && (
-        <PlateHighlight objects={objects} plateId={selectedPlateId} />
       )}
 
       {/* Phantom Elements — Ghost-Boxen fuer Grid-Erweiterung */}
@@ -1134,7 +1093,7 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
 
       {/* Spaltenbreiten / Zeilenhöhen — nur bei aktiver Selektion */}
       <group name="dim-labels">
-        {drillLevel === 'moebel' && selectedCell && onSetCol && onSetRow && (
+        {drillLevel === 'shop' && selectedCell && onSetCol && onSetRow && (
           <ColumnRowLabels
             cols={state.cols}
             rows={state.rows}
@@ -1193,7 +1152,6 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
         ccRef={ccRef}
         drillLevel={drillLevel}
         selectedCell={selectedCell ?? null}
-        selectedPlateId={selectedPlateId ?? null}
         objects={objects}
         furnitureBounds={{ minX: boxMinX, minY: boxMinY, minZ: boxMinZ, maxX: boxMaxX, maxY: boxMaxY, maxZ: boxMaxZ }}
       />
