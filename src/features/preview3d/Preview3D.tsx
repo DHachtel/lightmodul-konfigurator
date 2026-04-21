@@ -865,11 +865,11 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
       return;
     }
 
-    // Standard-Modus (Wuerfel)
+    // Standard-Modus (Wuerfel) — explizit 'O' uebergeben um BT-Propagation zu verhindern
     if (action === 'internal') {
       onSetCellType3D?.(targetRow, targetCol, targetDepth, 'O');
     } else {
-      onExpandAndActivate3D?.(targetRow, targetCol, targetDepth);
+      onExpandAndActivate3D?.(targetRow, targetCol, targetDepth, 'O');
     }
   }, [onSetCellType3D, onExpandAndActivate3D, placementType, state.rows.length]);
 
