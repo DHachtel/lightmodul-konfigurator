@@ -60,6 +60,38 @@ function trimEmptyEdges(s: ConfigState): ConfigState {
   return { ...s, cols, rows, depthLayers, grid };
 }
 
+/** Entfernt alle Zellen die nach einer Aenderung keinen Support mehr haben (Schwerkraft-Kaskade) */
+function cascadeGravity(grid: Grid): Grid {
+  const nR = grid.length;
+  const nC = grid[0]?.length ?? 0;
+  const nD = grid[0]?.[0]?.length ?? 0;
+  let changed = true;
+
+  // Kopie erstellen
+  let g: Grid = grid.map(rowArr =>
+    rowArr.map(colArr => colArr.map(cell => ({ ...cell })))
+  );
+
+  // Iterativ alle schwebenden Zellen entfernen (von oben nach unten)
+  while (changed) {
+    changed = false;
+    for (let r = 0; r < nR; r++) {
+      for (let c = 0; c < nC; c++) {
+        for (let d = 0; d < nD; d++) {
+          if (g[r][c][d].type === '') continue;
+          const isBottom = r === nR - 1;
+          const hasSupport = isBottom || g[r + 1]?.[c]?.[d]?.type !== '';
+          if (!hasSupport) {
+            g[r][c][d] = { type: '' as CellType, shelves: 0 };
+            changed = true;
+          }
+        }
+      }
+    }
+  }
+  return g;
+}
+
 /** Baut ein neues 3D-Grid aus einem bestehenden (oder leerem) Grid */
 function buildGrid3D(nR: number, nC: number, nD: number, existing?: Grid): Grid {
   return Array.from({ length: nR }, (_, r) =>
@@ -161,9 +193,12 @@ export function useConfigStore(): [ConfigState, ConfigActions, () => void] {
         );
 
         let next = { ...s, grid };
-
-        // Nach Entfernen (type='') automatisch leere Raender aufraeumen
-        return t === '' ? trimEmptyEdges(next) : next;
+        if (t === '') {
+          next = { ...next, grid: cascadeGravity(next.grid) };
+          next = trimEmptyEdges(next);
+          return next;
+        }
+        return next;
       });
     },
 
@@ -381,8 +416,12 @@ export function useConfigStore(): [ConfigState, ConfigActions, () => void] {
             })
           )
         );
-        const next = { ...s, grid };
-        return t === '' ? trimEmptyEdges(next) : next;
+        let next = { ...s, grid };
+        if (t === '') {
+          next = { ...next, grid: cascadeGravity(next.grid) };
+          next = trimEmptyEdges(next);
+        }
+        return next;
       });
     },
 
