@@ -108,8 +108,8 @@ function ConfiguratorShellInner() {
   }, [actions]);
 
   // True 3D: Grid erweitern + 1 Zelle aktivieren
-  const handleExpandAndActivate3D = useCallback((r: number, c: number, d: number) => {
-    actions.expandAndActivate3D(r, c, d);
+  const handleExpandAndActivate3D = useCallback((r: number, c: number, d: number, cellType?: import('@/core/types').CellType) => {
+    actions.expandAndActivate3D(r, c, d, cellType);
   }, [actions]);
 
   const handleRemoveElement = useCallback((row: number, col: number) => {

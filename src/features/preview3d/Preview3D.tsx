@@ -644,7 +644,7 @@ interface Preview3DProps {
   /** True 3D: exakt 1 Zelle bei (r,c,d) setzen */
   onSetCellType3D?: (r: number, c: number, d: number, t: CellType) => void;
   /** True 3D: Grid erweitern + 1 Zelle aktivieren */
-  onExpandAndActivate3D?: (r: number, c: number, d: number) => void;
+  onExpandAndActivate3D?: (r: number, c: number, d: number, cellType?: CellType) => void;
   /** Element entfernen (row, col) */
   onRemoveElement?: (row: number, col: number) => void;
   /** Leere Zelle mit 'O' füllen (row, col) */
@@ -844,20 +844,7 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
     if (action === 'internal') {
       onSetCellType3D?.(targetRow, targetCol, targetDepth, placementType);
     } else {
-      // expandAndActivate3D nutzt BT-Propagation im Store — fuer BT-Modus
-      // setzen wir den Typ nach der Expansion explizit
-      if (placementType === 'BT') {
-        onExpandAndActivate3D?.(targetRow, targetCol, targetDepth);
-        // BT-Typ wird durch Propagation im Store gesetzt wenn Nachbar BT ist,
-        // oder wir setzen es explizit nach Expansion
-        setTimeout(() => {
-          onSetCellType3D?.(
-            Math.max(0, targetRow), Math.max(0, targetCol), Math.max(0, targetDepth), 'BT'
-          );
-        }, 0);
-      } else {
-        onExpandAndActivate3D?.(targetRow, targetCol, targetDepth);
-      }
+      onExpandAndActivate3D?.(targetRow, targetCol, targetDepth, placementType);
     }
   }, [onSetCellType3D, onExpandAndActivate3D, placementType]);
 

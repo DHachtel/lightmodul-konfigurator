@@ -109,7 +109,7 @@ export interface ConfigActions {
   /** Setzt exakt 1 Zelle bei (r, c, d) — true 3D */
   setCellType3D(r: number, c: number, d: number, t: CellType): void;
   /** Grid erweitern + 1 Zelle bei (targetR, targetC, targetD) aktivieren */
-  expandAndActivate3D(targetR: number, targetC: number, targetD: number): void;
+  expandAndActivate3D(targetR: number, targetC: number, targetD: number, cellType?: CellType): void;
   // Fehler-State
   gravityError: string | null;
   clearGravityError(): void;
@@ -387,7 +387,7 @@ export function useConfigStore(): [ConfigState, ConfigActions, () => void] {
       });
     },
 
-    expandAndActivate3D: (targetR, targetC, targetD) => {
+    expandAndActivate3D: (targetR, targetC, targetD, cellType) => {
       setGravityError(null);
       update(s => {
         let { cols, rows, depthLayers, grid } = s;
@@ -452,19 +452,20 @@ export function useConfigStore(): [ConfigState, ConfigActions, () => void] {
           return s;
         }
 
-        // BT-Propagation: wenn ein Nachbar auf gleicher Reihe ein BT ist,
-        // wird die neue Zelle ebenfalls ein BT (statt 'O')
-        let activationType: CellType = 'O';
-        const nR2 = rows.length;
-        if (r === nR2 - 1) {
-          const neighbors = [
-            grid[r]?.[c - 1]?.[d],
-            grid[r]?.[c + 1]?.[d],
-            grid[r]?.[c]?.[d - 1],
-            grid[r]?.[c]?.[d + 1],
-          ];
-          if (neighbors.some(n => n?.type === 'BT')) {
-            activationType = 'BT';
+        // Zelltyp bestimmen: explizit uebergeben, BT-Propagation, oder 'O'
+        let activationType: CellType = cellType ?? 'O';
+        if (!cellType) {
+          const nR2 = rows.length;
+          if (r === nR2 - 1) {
+            const neighbors = [
+              grid[r]?.[c - 1]?.[d],
+              grid[r]?.[c + 1]?.[d],
+              grid[r]?.[c]?.[d - 1],
+              grid[r]?.[c]?.[d + 1],
+            ];
+            if (neighbors.some(n => n?.type === 'BT')) {
+              activationType = 'BT';
+            }
           }
         }
 
