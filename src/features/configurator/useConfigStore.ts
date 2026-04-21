@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import type { BOMResult, Cell, CellType, ConfigState, Grid } from '@/core/types';
 import { MAX_COLS, MAX_ROWS, MAX_DEPTH, ELEMENT_SIZE_MM } from '@/core/constants';
-import { maxShelves } from '@/core/validation';
+import { maxShelves, isBTBlocked } from '@/core/validation';
 
 // ── Standardwerte ────────────────────────────────────────────────────────────
 
@@ -159,8 +159,39 @@ export function useConfigStore(): [ConfigState, ConfigActions, () => void] {
             });
           })
         );
-        // Nach Entfernen (type='') automatisch leere Ränder aufräumen
-        const next = { ...s, grid };
+
+        let next = { ...s, grid };
+
+        // BT: sicherstellen dass Reihe darueber existiert und leer ist
+        if (t === 'BT') {
+          if (r === 0) {
+            // Keine Reihe darueber → addRowTop
+            if (next.rows.length < MAX_ROWS) {
+              const nD = next.depthLayers;
+              const newRow: Cell[][] = Array.from({ length: next.cols.length }, () =>
+                Array.from({ length: nD }, newCell)
+              );
+              next = {
+                ...next,
+                rows: [PAD_ROW_H, ...next.rows],
+                grid: [newRow, ...next.grid],
+              };
+            }
+          } else {
+            // Zelle darueber leeren
+            next = {
+              ...next,
+              grid: next.grid.map((rowArr, ri) =>
+                rowArr.map((colArr, ci) => {
+                  if (ri !== r - 1 || ci !== c) return colArr;
+                  return colArr.map(cell => ({ ...cell, type: '' as CellType }));
+                })
+              ),
+            };
+          }
+        }
+
+        // BT entfernt: Sperrung aufheben (implizit durch trimEmptyEdges)
         return t === '' ? trimEmptyEdges(next) : next;
       });
     },
@@ -445,15 +476,46 @@ export function useConfigStore(): [ConfigState, ConfigActions, () => void] {
           return s;
         }
 
+        // BT-Sperrung: nicht aktivieren wenn BT darunter
+        if (r + 1 < rows.length && (grid[r + 1]?.[c]?.[d]?.type ?? '') === 'BT') {
+          return s;
+        }
+
+        // BT-Propagation: wenn ein Nachbar auf gleicher Reihe ein BT ist,
+        // wird die neue Zelle ebenfalls ein BT (statt 'O')
+        let activationType: CellType = 'O';
+        const nR2 = rows.length;
+        if (r === nR2 - 1) {
+          const neighbors = [
+            grid[r]?.[c - 1]?.[d],
+            grid[r]?.[c + 1]?.[d],
+            grid[r]?.[c]?.[d - 1],
+            grid[r]?.[c]?.[d + 1],
+          ];
+          if (neighbors.some(n => n?.type === 'BT')) {
+            activationType = 'BT';
+          }
+        }
+
         // Zielzelle aktivieren
         grid = grid.map((rowArr, ri) =>
           rowArr.map((colArr, ci) =>
             colArr.map((cell, di) => {
               if (ri !== r || ci !== c || di !== d) return cell;
-              return { type: 'O' as CellType, shelves: 0 };
+              return { type: activationType, shelves: 0 };
             })
           )
         );
+
+        // BT: sicherstellen dass Reihe darueber frei ist
+        if (activationType === 'BT' && r > 0) {
+          grid = grid.map((rowArr, ri) =>
+            rowArr.map((colArr, ci) => {
+              if (ri !== r - 1 || ci !== c) return colArr;
+              return colArr.map(cell => ({ ...cell, type: '' as CellType }));
+            })
+          );
+        }
 
         let next = { ...s, cols, rows, depthLayers, grid };
         next = trimEmptyEdges(next);
