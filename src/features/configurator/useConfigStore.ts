@@ -14,15 +14,16 @@ function newCell(): Cell {
   return { type: '', shelves: 0 };
 }
 
-/** Entfernt komplett leere Rand-Spalten und -Zeilen (aber nie die letzte) */
+/** Entfernt komplett leere Rand-Spalten, -Zeilen und -Tiefenebenen (aber nie die letzte) */
 function trimEmptyEdges(s: ConfigState): ConfigState {
-  let { cols, rows, grid } = s;
-  const nD = s.depthLayers;
+  let { cols, rows, grid, depthLayers } = s;
 
   const isRowEmpty = (r: number) =>
     grid[r].every(colArr => colArr.every(cell => cell.type === ''));
   const isColEmpty = (c: number) =>
     grid.every(rowArr => rowArr[c].every(cell => cell.type === ''));
+  const isDepthEmpty = (d: number) =>
+    grid.every(rowArr => rowArr.every(colArr => colArr[d]?.type === ''));
 
   // Leere Zeilen oben entfernen
   while (rows.length > 1 && isRowEmpty(0)) {
@@ -44,9 +45,19 @@ function trimEmptyEdges(s: ConfigState): ConfigState {
     cols = cols.slice(0, -1);
     grid = grid.map(rowArr => rowArr.slice(0, -1));
   }
+  // Leere Tiefenebenen vorne (d=0) entfernen
+  while (depthLayers > 1 && isDepthEmpty(0)) {
+    depthLayers -= 1;
+    grid = grid.map(rowArr => rowArr.map(colArr => colArr.slice(1)));
+  }
+  // Leere Tiefenebenen hinten (d=nD-1) entfernen
+  while (depthLayers > 1 && isDepthEmpty(depthLayers - 1)) {
+    depthLayers -= 1;
+    grid = grid.map(rowArr => rowArr.map(colArr => colArr.slice(0, -1)));
+  }
 
-  if (cols === s.cols && rows === s.rows) return s; // nichts geändert
-  return { ...s, cols, rows, grid };
+  if (cols === s.cols && rows === s.rows && depthLayers === s.depthLayers) return s;
+  return { ...s, cols, rows, depthLayers, grid };
 }
 
 /** Baut ein neues 3D-Grid aus einem bestehenden (oder leerem) Grid */
@@ -95,6 +106,10 @@ export interface ConfigActions {
   addFilledRowBottom(): void;
   /** Grid erweitern + exakt 1 Zelle aktivieren (atomar) */
   expandAndActivateCell(direction: 'left' | 'right' | 'top', atIndex: number): void;
+  /** Setzt exakt 1 Zelle bei (r, c, d) — true 3D */
+  setCellType3D(r: number, c: number, d: number, t: CellType): void;
+  /** Grid erweitern + 1 Zelle bei (targetR, targetC, targetD) aktivieren */
+  expandAndActivate3D(targetR: number, targetC: number, targetD: number): void;
   // Fehler-State
   gravityError: string | null;
   clearGravityError(): void;
@@ -231,8 +246,12 @@ export function useConfigStore(): [ConfigState, ConfigActions, () => void] {
     addDepthFront: () => update(s => {
       if (s.depthLayers >= MAX_DEPTH) return s;
       const nD = s.depthLayers + 1;
+      // Neue Tiefenzelle: Typ der letzten Tiefenzelle kopieren (nicht leer)
       const grid: Grid = s.grid.map(rowArr =>
-        rowArr.map(colArr => [...colArr, newCell()])
+        rowArr.map(colArr => {
+          const last = colArr[colArr.length - 1];
+          return [...colArr, { type: last?.type ?? '', shelves: 0 }];
+        })
       );
       return { ...s, depthLayers: nD, grid };
     }),
@@ -348,6 +367,99 @@ export function useConfigStore(): [ConfigState, ConfigActions, () => void] {
       next = trimEmptyEdges(next);
       return next;
     }),
+
+    // ── True 3D Zellaktionen ──────────────────────────────────────────────
+    setCellType3D: (r, c, d, t) => {
+      setGravityError(null);
+      update(s => {
+        const grid: Grid = s.grid.map((rowArr, ri) =>
+          rowArr.map((colArr, ci) =>
+            colArr.map((cell, di) => {
+              if (ri !== r || ci !== c || di !== d) return cell;
+              return { type: t, shelves: cell.shelves };
+            })
+          )
+        );
+        const next = { ...s, grid };
+        return t === '' ? trimEmptyEdges(next) : next;
+      });
+    },
+
+    expandAndActivate3D: (targetR, targetC, targetD) => {
+      setGravityError(null);
+      update(s => {
+        let { cols, rows, depthLayers, grid } = s;
+        let r = targetR, c = targetC, d = targetD;
+
+        // Expand wenn Ziel außerhalb der Grenzen
+        if (r < 0) {
+          if (rows.length >= MAX_ROWS) return s;
+          rows = [PAD_ROW_H, ...rows];
+          const nD = depthLayers;
+          const newRow: Cell[][] = Array.from({ length: cols.length }, () =>
+            Array.from({ length: nD }, newCell)
+          );
+          grid = [newRow, ...grid];
+          r = 0;
+        }
+        if (c < 0) {
+          if (cols.length >= MAX_COLS) return s;
+          cols = [PAD_COL_W, ...cols];
+          grid = grid.map(rowArr => [
+            Array.from({ length: depthLayers }, newCell),
+            ...rowArr,
+          ]);
+          c = 0;
+        }
+        if (c >= cols.length) {
+          if (cols.length >= MAX_COLS) return s;
+          cols = [...cols, PAD_COL_W];
+          grid = grid.map(rowArr => [
+            ...rowArr,
+            Array.from({ length: depthLayers }, newCell),
+          ]);
+        }
+        if (d < 0) {
+          if (depthLayers >= MAX_DEPTH) return s;
+          depthLayers = depthLayers + 1;
+          grid = grid.map(rowArr =>
+            rowArr.map(colArr => [newCell(), ...colArr])
+          );
+          d = 0;
+        }
+        if (d >= depthLayers) {
+          if (depthLayers >= MAX_DEPTH) return s;
+          depthLayers = depthLayers + 1;
+          grid = grid.map(rowArr =>
+            rowArr.map(colArr => [...colArr, newCell()])
+          );
+        }
+
+        // Schwerkraft-Prüfung: Bodenzeile oder aktive Zelle direkt darunter
+        const nR = rows.length;
+        const isBottom = r === nR - 1;
+        const hasCellBelow = r + 1 < nR &&
+          (grid[r + 1]?.[c]?.[d]?.type ?? '') !== '';
+        if (!isBottom && !hasCellBelow) {
+          // Gravity verletzt — nicht aktivieren, Grid-Änderungen rückgängig
+          return s;
+        }
+
+        // Zielzelle aktivieren
+        grid = grid.map((rowArr, ri) =>
+          rowArr.map((colArr, ci) =>
+            colArr.map((cell, di) => {
+              if (ri !== r || ci !== c || di !== d) return cell;
+              return { type: 'O' as CellType, shelves: 0 };
+            })
+          )
+        );
+
+        let next = { ...s, cols, rows, depthLayers, grid };
+        next = trimEmptyEdges(next);
+        return next;
+      });
+    },
 
     // ── Fehler-State ──────────────────────────────────────────────────────
     gravityError,

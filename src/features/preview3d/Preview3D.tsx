@@ -20,7 +20,7 @@ const PathCtor = (THREE as Record<string, unknown>).Path as new () => {
 };
 const ExtrudeGeometryCtor = (THREE as Record<string, unknown>).ExtrudeGeometry as
   new (shape: unknown, options: { depth: number; bevelEnabled: boolean }) => THREE.BufferGeometry;
-import type { ConfigState } from '@/core/types';
+import type { CellType, ConfigState } from '@/core/types';
 import { ELEMENT_SIZE_MM, MAT_BY_V, MATERIALS, MAX_COLS, MAX_ROWS, MAX_DEPTH } from '@/core/constants';
 import { useModuleGeometry, type SceneObject } from './useModuleGeometry';
 import SmartMesh from './SmartMesh';
@@ -641,6 +641,10 @@ interface Preview3DProps {
   onGhostClick?: (row: number, col: number) => void;
   /** Grid erweitern und Zelle hinzufuegen (Rand-Ghost-Zones) */
   onExpandAndAdd?: (direction: 'left' | 'right' | 'top' | 'bottom' | 'depth', atIndex: number) => void;
+  /** True 3D: exakt 1 Zelle bei (r,c,d) setzen */
+  onSetCellType3D?: (r: number, c: number, d: number, t: CellType) => void;
+  /** True 3D: Grid erweitern + 1 Zelle aktivieren */
+  onExpandAndActivate3D?: (r: number, c: number, d: number) => void;
   /** Element entfernen (row, col) */
   onRemoveElement?: (row: number, col: number) => void;
   /** Leere Zelle mit 'O' füllen (row, col) */
@@ -671,6 +675,8 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
   onExpandAndAdd,
   onRemoveElement,
   onAddCell,
+  onSetCellType3D,
+  onExpandAndActivate3D,
   onSetCol,
   onSetRow,
   bgColor = '#F5F2ED',
@@ -729,7 +735,8 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
     size: [number, number, number];
     targetRow: number;
     targetCol: number;
-    action: 'internal' | 'expandLeft' | 'expandRight' | 'expandTop' | 'depth';
+    targetDepth: number;
+    action: 'internal' | 'expand';
   }
 
   const phantomElements = useMemo<PhantomPos[]>(() => {
@@ -741,142 +748,83 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
     const sEl = ELEMENT_SIZE_MM; // 600mm
     const totalW = nC * sEl;
     const totalD = nD * sEl;
-    const xBase = -totalW / 2;    // Zentrierung X
-    const yBase = 0;               // Boden
-    const zBase = -totalD / 2;     // Zentrierung Z
+    const xBase = -totalW / 2;
+    const yBase = 0;
+    const zBase = -totalD / 2;
+    const box = sEl * S; // 600mm in Three.js
 
-    // Einheitliche Phantom-Box Größe: immer exakt 1 Element (600×600×Tiefe)
-    const boxSide = sEl * S;       // 600mm in Three.js
-    const boxDepth = totalD * S;   // Gesamte Möbeltiefe in Three.js
+    // Ist Zelle (r,c,d) aktiv?
+    const isActive = (r: number, c: number, d: number) =>
+      r >= 0 && r < nR && c >= 0 && c < nC && d >= 0 && d < nD &&
+      (state.grid[r]?.[c]?.[d]?.type ?? '') !== '';
 
-    const isActive = (r: number, c: number) =>
-      r >= 0 && r < nR && c >= 0 && c < nC &&
-      (state.grid[r]?.[c]?.some(cell => cell.type !== '') ?? false);
+    // Schwerkraft: Bodenzeile hat immer Support, sonst braucht man aktive Zelle darunter
+    const hasSupport = (r: number, c: number, d: number) =>
+      r === nR - 1 || isActive(r + 1, c, d);
 
-    // Support: Bodenzeile ODER aktives Element direkt darunter
-    const hasSupport = (r: number) => {
-      // Bodenzeile hat immer Support (egal welche Spalte)
-      return r === nR - 1;
-    };
-    const hasSupportAt = (r: number, c: number) => {
-      if (r === nR - 1) return true; // Bodenzeile
-      return isActive(r + 1, c);     // Element darunter aktiv
-    };
+    // Alle 5 Richtungen von jeder aktiven Zelle scannen (nicht NACH UNTEN)
+    const seen = new Set<string>();
 
-    // Position berechnen: Zellmitte in Three.js Koordinaten
-    const pos = (r: number, c: number): [number, number, number] => [
-      (xBase + (c + 0.5) * sEl) * S,
-      (yBase + (nR - r - 0.5) * sEl) * S,
-      (zBase + totalD / 2) * S,
-    ];
-
-    // ── 1. INTERNE leere Zellen ────────────────────────────────────────────
     for (let r = 0; r < nR; r++) {
       for (let c = 0; c < nC; c++) {
-        if (isActive(r, c)) continue;
-        if (!hasSupportAt(r, c)) continue;
-        // Mindestens ein aktiver 4-Nachbar
-        const hasNeighbor =
-          isActive(r - 1, c) || isActive(r + 1, c) ||
-          isActive(r, c - 1) || isActive(r, c + 1);
-        if (!hasNeighbor) continue;
+        for (let d = 0; d < nD; d++) {
+          if (!isActive(r, c, d)) continue;
 
-        phantoms.push({
-          id: `ph_${r}_${c}`,
-          position: pos(r, c),
-          size: [boxSide, boxSide, boxDepth],
-          targetRow: r, targetCol: c,
-          action: 'internal',
-        });
-      }
-    }
+          // 5 Nachbarn: oben, links, rechts, vorne (d-1), hinten (d+1)
+          const neighbors: [number, number, number, string][] = [
+            [r - 1, c, d, 'up'],
+            [r, c - 1, d, 'left'],
+            [r, c + 1, d, 'right'],
+            [r, c, d - 1, 'front'],
+            [r, c, d + 1, 'back'],
+          ];
 
-    // ── 2. RAND-Erweiterung: Links, Rechts, Oben ──────────────────────────
-    // Schwerkraft bottom-up: eine Rand-Zelle hat Support wenn sie in der
-    // Bodenzeile ist, ODER die Zelle darunter in der selben neuen Spalte
-    // ebenfalls ein Phantom bekommen würde.
-    if (nC < MAX_COLS) {
-      // LINKS: bottom-up Support-Kette aufbauen
-      const leftOK: boolean[] = Array(nR).fill(false);
-      for (let r = nR - 1; r >= 0; r--) {
-        if (!isActive(r, 0)) continue; // kein Nachbar rechts → kein Phantom
-        const support = r === nR - 1 || leftOK[r + 1];
-        if (support) leftOK[r] = true;
-      }
-      for (let r = 0; r < nR; r++) {
-        if (!leftOK[r]) continue;
-        phantoms.push({
-          id: `ph_left_${r}`,
-          position: [(xBase - sEl / 2) * S, (yBase + (nR - r - 0.5) * sEl) * S, (zBase + totalD / 2) * S],
-          size: [boxSide, boxSide, boxDepth],
-          targetRow: r, targetCol: -1,
-          action: 'expandLeft',
-        });
-      }
+          for (const [nr, nc, nd, dir] of neighbors) {
+            // Ziel bereits aktiv → kein Phantom
+            if (isActive(nr, nc, nd)) continue;
 
-      // RECHTS: bottom-up Support-Kette aufbauen
-      const rightOK: boolean[] = Array(nR).fill(false);
-      for (let r = nR - 1; r >= 0; r--) {
-        if (!isActive(r, nC - 1)) continue;
-        const support = r === nR - 1 || rightOK[r + 1];
-        if (support) rightOK[r] = true;
-      }
-      for (let r = 0; r < nR; r++) {
-        if (!rightOK[r]) continue;
-        phantoms.push({
-          id: `ph_right_${r}`,
-          position: [(xBase + totalW + sEl / 2) * S, (yBase + (nR - r - 0.5) * sEl) * S, (zBase + totalD / 2) * S],
-          size: [boxSide, boxSide, boxDepth],
-          targetRow: r, targetCol: nC,
-          action: 'expandRight',
-        });
-      }
-    }
+            // ── Schwerkraft: Zielposition braucht Support (nicht für Tiefe) ──
+            if (dir !== 'front' && dir !== 'back') {
+              // Bodenzeile hat immer Support
+              const targetIsBottomRow = nr === nR - 1;
+              // Zelle direkt darunter aktiv? (funktioniert für interne UND Expansion)
+              const cellBelow = isActive(nr + 1, nc, nd);
+              if (!targetIsBottomRow && !cellBelow) continue;
+            }
 
-    // OBEN: Zelle bei row=0 aktiv → Phantom darüber (Support = row=0 darunter)
-    if (nR < MAX_ROWS) {
-      for (let c = 0; c < nC; c++) {
-        if (!isActive(0, c)) continue;
-        phantoms.push({
-          id: `ph_top_${c}`,
-          position: [(xBase + (c + 0.5) * sEl) * S, (yBase + (nR + 0.5) * sEl) * S, (zBase + totalD / 2) * S],
-          size: [boxSide, boxSide, boxDepth],
-          targetRow: -1, targetCol: c,
-          action: 'expandTop',
-        });
-      }
-    }
+            // Grid-Limits für Expansion prüfen
+            if (dir === 'up' && nR >= MAX_ROWS && nr < 0) continue;
+            if (dir === 'left' && nC >= MAX_COLS && nc < 0) continue;
+            if (dir === 'right' && nC >= MAX_COLS && nc >= nC) continue;
+            if (dir === 'front' && nD >= MAX_DEPTH && nd < 0) continue;
+            if (dir === 'back' && nD >= MAX_DEPTH && nd >= nD) continue;
 
-    // ── 3. TIEFE (Z-Achse): Vorne und Hinten ─────────────────────────────
-    // Ein Phantom pro aktiver Zelle, jeweils 600×600×600
-    if (nD < MAX_DEPTH) {
-      for (let r = 0; r < nR; r++) {
-        for (let c = 0; c < nC; c++) {
-          if (!isActive(r, c)) continue;
-          // HINTEN (Z+)
-          phantoms.push({
-            id: `ph_back_${r}_${c}`,
-            position: [
-              (xBase + (c + 0.5) * sEl) * S,
-              (yBase + (nR - r - 0.5) * sEl) * S,
-              (zBase + totalD + sEl / 2) * S,
-            ],
-            size: [boxSide, boxSide, boxSide],
-            targetRow: r, targetCol: c,
-            action: 'depth',
-          });
-          // VORNE (Z-)
-          phantoms.push({
-            id: `ph_front_${r}_${c}`,
-            position: [
-              (xBase + (c + 0.5) * sEl) * S,
-              (yBase + (nR - r - 0.5) * sEl) * S,
-              (zBase - sEl / 2) * S,
-            ],
-            size: [boxSide, boxSide, boxSide],
-            targetRow: r, targetCol: c,
-            action: 'depth',
-          });
+            // Deduplizierung
+            const key = `${nr}_${nc}_${nd}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+
+            // Intern vs. Expansion bestimmen
+            const isInternal = nr >= 0 && nr < nR && nc >= 0 && nc < nC && nd >= 0 && nd < nD;
+
+            // Position berechnen — auch für Expansion-Positionen außerhalb des Grids
+            const posR = nr; // pos3d behandelt negative/übergroße Werte korrekt
+            const posC = nc;
+            const posD = nd;
+            const px = (xBase + (posC + 0.5) * sEl) * S;
+            const py = (yBase + (nR - posR - 0.5) * sEl) * S;
+            const pz = (zBase + (posD + 0.5) * sEl) * S;
+
+            phantoms.push({
+              id: `ph3d_${nr}_${nc}_${nd}`,
+              position: [px, py, pz],
+              size: [box, box, box],
+              targetRow: nr,
+              targetCol: nc,
+              targetDepth: nd,
+              action: isInternal ? 'internal' : 'expand',
+            });
+          }
         }
       }
     }
@@ -884,49 +832,79 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
     return phantoms;
   }, [state.grid, state.cols, state.rows, state.depthLayers]);
 
-  // Phantom Element Klick-Handler
+  // Phantom Element Klick-Handler — true 3D
   const handlePhantomClick = useCallback((phantom: PhantomPos) => {
-    if (phantom.action === 'internal') {
-      onAddCell?.(phantom.targetRow, phantom.targetCol);
-    } else if (phantom.action === 'expandLeft') {
-      onExpandAndAdd?.('left', phantom.targetRow);
-    } else if (phantom.action === 'expandRight') {
-      onExpandAndAdd?.('right', phantom.targetRow);
-    } else if (phantom.action === 'expandTop') {
-      onExpandAndAdd?.('top', phantom.targetCol);
-    } else if (phantom.action === 'depth') {
-      onExpandAndAdd?.('depth', 0);
+    const { targetRow, targetCol, targetDepth, action } = phantom;
+    if (action === 'internal') {
+      onSetCellType3D?.(targetRow, targetCol, targetDepth, 'O');
+    } else {
+      onExpandAndActivate3D?.(targetRow, targetCol, targetDepth);
     }
-  }, [onAddCell, onExpandAndAdd]);
+  }, [onSetCellType3D, onExpandAndActivate3D]);
 
-  // ── Remove Buttons: auf allen aktiven Zellen (keine Schwerkraft-Einschraenkung) ──
+  // ── Remove Buttons: 1 × pro entfernbarem Element, am nächsten Außenrand ──
   const cellButtons = useMemo(() => {
     const removes: { row: number; col: number; position: [number, number, number] }[] = [];
     const nR = state.rows.length;
     const nC = state.cols.length;
     const nD = state.depthLayers;
-    const totalW = nC * ELEMENT_SIZE_MM;
-    const totalD = nD * ELEMENT_SIZE_MM;
+    const sEl = ELEMENT_SIZE_MM;
+    const totalW = nC * sEl;
+    const totalD = nD * sEl;
     const xBase = -totalW / 2;
     const yBase = 0;
     const zBase = -totalD / 2;
 
+    const activeAny = (r: number, c: number) =>
+      r >= 0 && r < nR && c >= 0 && c < nC &&
+      (state.grid[r]?.[c]?.some(cell => cell.type !== '') ?? false);
+
+    // Entfernbar: KEIN aktives Element direkt darüber
+    const canRemove = (r: number, c: number) =>
+      !(r > 0 && activeAny(r - 1, c));
+
     for (let r = 0; r < nR; r++) {
       for (let c = 0; c < nC; c++) {
-        const isOccupied = state.grid[r]?.[c]?.some(cell => cell.type !== '') ?? false;
-        if (!isOccupied) continue;
+        if (!activeAny(r, c)) continue;
+        if (!canRemove(r, c)) continue;
 
-        // × Button auf der Oberseite der Zelle, Mitte, leicht nach vorne
-        removes.push({
-          row: r, col: c,
-          position: [
-            (xBase + (c + 0.5) * ELEMENT_SIZE_MM) * S,
-            (yBase + (nR - r) * ELEMENT_SIZE_MM + 15) * S,
-            (zBase - 30) * S,
-          ],
-        });
+        const cx = xBase + (c + 0.5) * sEl;
+        const cy = yBase + (nR - r - 0.5) * sEl;
+
+        // Beste Außenfläche finden: die am weitesten vom Möbelzentrum entfernte freie Fläche
+        const free = {
+          top:   !activeAny(r - 1, c),
+          left:  !activeAny(r, c - 1),
+          right: !activeAny(r, c + 1),
+          front: true, // Vorderseite immer frei (Kameraseite)
+        };
+
+        // Priorität: rechts > links > oben > vorne (seitlich ist am sichtbarsten)
+        let px = cx * S, py = cy * S, pz = (zBase - 15) * S;
+
+        if (free.right) {
+          px = (xBase + (c + 1) * sEl + 15) * S;
+          py = cy * S;
+          pz = (zBase + totalD / 2) * S;
+        } else if (free.left) {
+          px = (xBase + c * sEl - 15) * S;
+          py = cy * S;
+          pz = (zBase + totalD / 2) * S;
+        } else if (free.top) {
+          px = cx * S;
+          py = (yBase + (nR - r) * sEl + 15) * S;
+          pz = (zBase + totalD / 2) * S;
+        } else {
+          // Nur vorne frei
+          px = cx * S;
+          py = cy * S;
+          pz = (zBase - 15) * S;
+        }
+
+        removes.push({ row: r, col: c, position: [px, py, pz] });
       }
     }
+
     return { removes };
   }, [state.grid, state.cols, state.rows, state.depthLayers]);
 

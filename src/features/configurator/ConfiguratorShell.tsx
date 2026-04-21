@@ -15,7 +15,7 @@ import { computeBOM } from '@/core/calc';
 import { ELEMENT_SIZE_MM } from '@/core/constants';
 import { buildBOMRowsExtended, downloadXLSXExtended } from '@/features/bom/exportXLS';
 import type { ThreeCanvasHandle } from '@/features/preview3d/Preview3D';
-import type { ConfigState } from '@/core/types';
+import type { CellType, ConfigState } from '@/core/types';
 // GhostSide nicht mehr benötigt — Ghost Zones arbeiten jetzt zellbasiert
 import SidebarMoebel from './SidebarMoebel';
 import SidebarElement from './SidebarElement';
@@ -99,6 +99,16 @@ function ConfiguratorShellInner() {
     } else if (direction === 'depth') {
       actions.addDepthFront();
     }
+  }, [actions]);
+
+  // True 3D: exakt 1 Zelle bei (r,c,d) setzen
+  const handleSetCellType3D = useCallback((r: number, c: number, d: number, t: CellType) => {
+    actions.setCellType3D(r, c, d, t);
+  }, [actions]);
+
+  // True 3D: Grid erweitern + 1 Zelle aktivieren
+  const handleExpandAndActivate3D = useCallback((r: number, c: number, d: number) => {
+    actions.expandAndActivate3D(r, c, d);
   }, [actions]);
 
   const handleRemoveElement = useCallback((row: number, col: number) => {
@@ -396,6 +406,8 @@ function ConfiguratorShellInner() {
           onExpandAndAdd={handleExpandAndAdd}
           onRemoveElement={handleRemoveElement}
           onAddCell={handleAddCell}
+          onSetCellType3D={handleSetCellType3D}
+          onExpandAndActivate3D={handleExpandAndActivate3D}
           onSetCol={actions.setCol}
           onSetRow={actions.setRow}
           showDimensions={showDimensions}
