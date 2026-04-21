@@ -186,11 +186,13 @@ export function computeModuleGeometry(state: ConfigState): SceneObject[] {
         // BT-Split: wo 360+Wuerfel+213 ein 600mm-Profil ersetzt
         if (rk === btRk && btNodeActive(btRk, ck, dk)) {
           let hasRegAbove = false;
-          for (let r2 = Math.max(0, btRk - 2); r2 <= Math.min(nR - 1, btRk - 1); r2++)
+          const btRow = nR - 1;
+          if (btRow > 0) {
             for (let c2 = Math.max(0, ck - 1); c2 <= Math.min(nC - 1, ck); c2++)
               for (let d2 = Math.max(0, dk - 1); d2 <= Math.min(nD - 1, dk); d2++)
-                if (isActive(r2, c2, d2) && !isBTCell(r2, c2, d2))
+                if (isBTCell(btRow, c2, d2) && isActive(btRow - 1, c2, d2) && !isBTCell(btRow - 1, c2, d2))
                   hasRegAbove = true;
+          }
           if (hasRegAbove) continue; // Skip — replaced by 360+213
         }
 
@@ -337,15 +339,16 @@ export function computeModuleGeometry(state: ConfigState): SceneObject[] {
         metalness: 0.8,
       });
 
-      // 213mm Anschlussprofil (nur wenn regulaeres Modul oberhalb)
-      if (btRk > 0 && nodeActive(btRk - 1, ck, dk)) {
+      // 213mm Anschlussprofil (nur wenn regulaeres Modul in derselben Spalte/Tiefe direkt ueber dem BT)
+      {
         let hasRegularAbove = false;
-        for (let r2 = Math.max(0, btRk - 2); r2 <= Math.min(nR - 1, btRk - 1); r2++)
+        const btRow = nR - 1;
+        if (btRow > 0) {
           for (let c2 = Math.max(0, ck - 1); c2 <= Math.min(nC - 1, ck); c2++)
             for (let d2 = Math.max(0, dk - 1); d2 <= Math.min(nD - 1, dk); d2++)
-              if (isActive(r2, c2, d2) && !isBTCell(r2, c2, d2))
+              if (isBTCell(btRow, c2, d2) && isActive(btRow - 1, c2, d2) && !isBTCell(btRow - 1, c2, d2))
                 hasRegularAbove = true;
-
+        }
         if (hasRegularAbove) {
           const wyUpper = yBase + (nR - btRk + 1) * S;
           const prof213Y = wyWorktop + (wyUpper - wyWorktop) / 2;

@@ -100,21 +100,20 @@ export function computeBOM(config: ConfigState): BOMResult | null {
 
         // BT-Split: wo 360+Wuerfel+213 ein 600mm-Profil ersetzt
         if (rk === btRk) {
-          // Pruefe ob dieser Knoten ein BT-Worktop-Knoten ist
           let hasBTAdj = false;
-          for (let r2 = Math.max(0, btRk); r2 <= Math.min(nR - 1, btRk); r2++)
-            for (let c2 = Math.max(0, ck - 1); c2 <= Math.min(nC - 1, ck); c2++)
-              for (let d2 = Math.max(0, dk - 1); d2 <= Math.min(nD - 1, dk); d2++)
-                if (isBTEarly(r2, c2, d2)) hasBTAdj = true;
+          for (let c2 = Math.max(0, ck - 1); c2 <= Math.min(nC - 1, ck); c2++)
+            for (let d2 = Math.max(0, dk - 1); d2 <= Math.min(nD - 1, dk); d2++)
+              if (isBTEarly(btRk, c2, d2)) hasBTAdj = true;
 
           if (hasBTAdj) {
-            // Pruefe ob oberhalb ein regulaeres Modul existiert
+            // Nur skippen wenn ein BT-Nachbar ein regulaeres Modul in derselben Spalte/Tiefe direkt darueber hat
             let hasRegAbove = false;
-            for (let r2 = Math.max(0, btRk - 1); r2 <= Math.min(nR - 1, btRk); r2++)
+            if (btRk > 0) {
               for (let c2 = Math.max(0, ck - 1); c2 <= Math.min(nC - 1, ck); c2++)
                 for (let d2 = Math.max(0, dk - 1); d2 <= Math.min(nD - 1, dk); d2++)
-                  if (isActive(grid[r2]?.[c2]?.[d2] ?? { type: '' as CellType, shelves: 0 }) && !isBTEarly(r2, c2, d2))
+                  if (isBTEarly(btRk, c2, d2) && isActive(grid[btRk - 1]?.[c2]?.[d2] ?? { type: '' as CellType, shelves: 0 }) && !isBTEarly(btRk - 1, c2, d2))
                     hasRegAbove = true;
+            }
             if (hasRegAbove) continue; // Skip — ersetzt durch 360+213
           }
         }
@@ -204,20 +203,20 @@ export function computeBOM(config: ConfigState): BOMResult | null {
           if (btNodeActive(rk, ck, dk) && nodeActive(rk, ck, dk))
             profil360++;
 
-    // 213mm-Profile: nur wo ueber dem BT ein regulaeres Modul existiert
+    // 213mm-Profile: nur wo ein BT-Nachbar ein regulaeres Modul in derselben Spalte/Tiefe direkt darueber hat
+    const btRow = nR - 1;
     for (let rk = 0; rk <= nR; rk++)
       for (let ck = 0; ck <= nC; ck++)
         for (let dk = 0; dk <= nD; dk++) {
           if (!btNodeActive(rk, ck, dk)) continue;
-          if (rk > 0 && nodeActive(rk - 1, ck, dk) && nodeActive(rk, ck, dk)) {
-            let hasRegularAbove = false;
-            for (let r2 = Math.max(0, rk - 2); r2 <= Math.min(nR - 1, rk - 1); r2++)
-              for (let c2 = Math.max(0, ck - 1); c2 <= Math.min(nC - 1, ck); c2++)
-                for (let d2 = Math.max(0, dk - 1); d2 <= Math.min(nD - 1, dk); d2++)
-                  if (isActive(grid[r2]?.[c2]?.[d2] ?? { type: '' as CellType, shelves: 0 }) && !isBT(r2, c2, d2))
-                    hasRegularAbove = true;
-            if (hasRegularAbove) profil213++;
+          let hasRegularAbove = false;
+          if (btRow > 0) {
+            for (let c2 = Math.max(0, ck - 1); c2 <= Math.min(nC - 1, ck); c2++)
+              for (let d2 = Math.max(0, dk - 1); d2 <= Math.min(nD - 1, dk); d2++)
+                if (isBT(btRow, c2, d2) && isActive(grid[btRow - 1]?.[c2]?.[d2] ?? { type: '' as CellType, shelves: 0 }) && !isBT(btRow - 1, c2, d2))
+                  hasRegularAbove = true;
           }
+          if (hasRegularAbove) profil213++;
         }
   }
 
