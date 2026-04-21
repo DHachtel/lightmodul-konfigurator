@@ -3,7 +3,7 @@
 import type { ConfigState } from '@/core/types';
 import type { ConfigActions } from './useConfigStore';
 import { CELL_TYPES, ELEMENT_SIZE_MM } from '@/core/constants';
-import { getAvailableCellTypes } from '@/core/validation';
+import { getAvailableCellTypes, isBTBlocked } from '@/core/validation';
 
 interface Props {
   state: ConfigState;
@@ -17,9 +17,31 @@ export default function SidebarElement({ state, actions, row, col }: Props) {
   const cell = state.grid[row]?.[col]?.[0];
   if (!cell) return null;
 
+  // Durch BT darunter gesperrte Zelle
+  if (isBTBlocked(state.grid, row, col, 0)) {
+    return (
+      <div style={{ padding: '20px 20px 0' }}>
+        <div style={{
+          background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: 8,
+          padding: '10px 12px', marginBottom: 16,
+        }}>
+          <span style={{
+            fontFamily: 'var(--font-sans)', fontWeight: 600,
+            fontSize: 9, letterSpacing: '.18em', textTransform: 'uppercase', color: '#92400E',
+          }}>
+            Gesperrt
+          </span>
+          <p style={{ fontSize: 11, color: '#B45309', marginTop: 4, fontFamily: 'var(--font-sans)' }}>
+            Diese Position ist durch den Beratungstisch darunter belegt.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const w = state.cols[col];
   const h = state.rows[row];
-  const availableTypes = getAvailableCellTypes();
+  const availableTypes = getAvailableCellTypes(row, col, 0, state.grid, state.cols.length, state.depthLayers);
   const totalDepth = state.depthLayers * ELEMENT_SIZE_MM;
 
   return (
@@ -60,34 +82,38 @@ export default function SidebarElement({ state, actions, row, col }: Props) {
         </div>
       </Section>
 
-      <Divider />
+      {cell.type !== 'BT' && (
+        <>
+          <Divider />
 
-      {/* -- FACHBOEDEN -- */}
-      <Section label="Fachboeden">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10 }}>
-          <button
-            onClick={() => actions.setShelves(row, col, cell.shelves - 1)}
-            disabled={cell.shelves <= 0}
-            style={{
-              width: 32, height: 32, borderRadius: 8, border: 'none',
-              background: '#F2EFE9', color: '#6A6660', fontSize: 16, cursor: 'pointer',
-              opacity: cell.shelves <= 0 ? 0.3 : 1,
-            }}
-          >-</button>
-          <span style={{ fontSize: 18, fontWeight: 500, color: '#171614', minWidth: 24, textAlign: 'center' }}>
-            {cell.shelves}
-          </span>
-          <button
-            onClick={() => actions.setShelves(row, col, cell.shelves + 1)}
-            disabled={cell.shelves >= 2}
-            style={{
-              width: 32, height: 32, borderRadius: 8, border: 'none',
-              background: '#F2EFE9', color: '#6A6660', fontSize: 16, cursor: 'pointer',
-              opacity: cell.shelves >= 2 ? 0.3 : 1,
-            }}
-          >+</button>
-        </div>
-      </Section>
+          {/* -- FACHBOEDEN -- */}
+          <Section label="Fachboeden">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10 }}>
+              <button
+                onClick={() => actions.setShelves(row, col, cell.shelves - 1)}
+                disabled={cell.shelves <= 0}
+                style={{
+                  width: 32, height: 32, borderRadius: 8, border: 'none',
+                  background: '#F2EFE9', color: '#6A6660', fontSize: 16, cursor: 'pointer',
+                  opacity: cell.shelves <= 0 ? 0.3 : 1,
+                }}
+              >-</button>
+              <span style={{ fontSize: 18, fontWeight: 500, color: '#171614', minWidth: 24, textAlign: 'center' }}>
+                {cell.shelves}
+              </span>
+              <button
+                onClick={() => actions.setShelves(row, col, cell.shelves + 1)}
+                disabled={cell.shelves >= 2}
+                style={{
+                  width: 32, height: 32, borderRadius: 8, border: 'none',
+                  background: '#F2EFE9', color: '#6A6660', fontSize: 16, cursor: 'pointer',
+                  opacity: cell.shelves >= 2 ? 0.3 : 1,
+                }}
+              >+</button>
+            </div>
+          </Section>
+        </>
+      )}
     </div>
   );
 }
