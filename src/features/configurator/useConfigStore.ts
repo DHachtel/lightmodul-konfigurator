@@ -162,36 +162,7 @@ export function useConfigStore(): [ConfigState, ConfigActions, () => void] {
 
         let next = { ...s, grid };
 
-        // BT: sicherstellen dass Reihe darueber existiert und leer ist
-        if (t === 'BT') {
-          if (r === 0) {
-            // Keine Reihe darueber → addRowTop
-            if (next.rows.length < MAX_ROWS) {
-              const nD = next.depthLayers;
-              const newRow: Cell[][] = Array.from({ length: next.cols.length }, () =>
-                Array.from({ length: nD }, newCell)
-              );
-              next = {
-                ...next,
-                rows: [PAD_ROW_H, ...next.rows],
-                grid: [newRow, ...next.grid],
-              };
-            }
-          } else {
-            // Zelle darueber leeren
-            next = {
-              ...next,
-              grid: next.grid.map((rowArr, ri) =>
-                rowArr.map((colArr, ci) => {
-                  if (ri !== r - 1 || ci !== c) return colArr;
-                  return colArr.map(cell => ({ ...cell, type: '' as CellType }));
-                })
-              ),
-            };
-          }
-        }
-
-        // BT entfernt: Sperrung aufheben (implizit durch trimEmptyEdges)
+        // Nach Entfernen (type='') automatisch leere Raender aufraeumen
         return t === '' ? trimEmptyEdges(next) : next;
       });
     },
@@ -506,16 +477,6 @@ export function useConfigStore(): [ConfigState, ConfigActions, () => void] {
             })
           )
         );
-
-        // BT: sicherstellen dass Reihe darueber frei ist
-        if (activationType === 'BT' && r > 0) {
-          grid = grid.map((rowArr, ri) =>
-            rowArr.map((colArr, ci) => {
-              if (ri !== r - 1 || ci !== c) return colArr;
-              return colArr.map(cell => ({ ...cell, type: '' as CellType }));
-            })
-          );
-        }
 
         let next = { ...s, cols, rows, depthLayers, grid };
         next = trimEmptyEdges(next);

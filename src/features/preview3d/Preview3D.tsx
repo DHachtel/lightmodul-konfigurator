@@ -786,6 +786,9 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
             // Ziel bereits aktiv → kein Phantom
             if (isActive(nr, nc, nd)) continue;
 
+            // ── BT-Sperrung: kein Phantom ueber einem Beratungstisch ──
+            if (dir === 'up' && (state.grid[r]?.[c]?.[d]?.type ?? '') === 'BT') continue;
+
             // ── Schwerkraft: Zielposition braucht Support (nicht für Tiefe) ──
             if (dir !== 'front' && dir !== 'back') {
               // Bodenzeile hat immer Support
