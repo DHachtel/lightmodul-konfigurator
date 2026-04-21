@@ -873,9 +873,13 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
     }
   }, [onSetCellType3D, onExpandAndActivate3D, placementType, state.rows.length]);
 
-  // ── Remove Buttons: 1 × pro entfernbarem Element, am nächsten Außenrand ──
+  // ── Remove Buttons: X nur am selektierten Element anzeigen ──
   const cellButtons = useMemo(() => {
     const removes: { row: number; col: number; position: [number, number, number] }[] = [];
+
+    // Nur X-Button am selektierten Element anzeigen
+    if (!selectedCell) return { removes };
+
     const nR = state.rows.length;
     const nC = state.cols.length;
     const nD = state.depthLayers;
@@ -886,58 +890,24 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
     const yBase = 0;
     const zBase = -totalD / 2;
 
-    const activeAny = (r: number, c: number) =>
-      r >= 0 && r < nR && c >= 0 && c < nC &&
-      (state.grid[r]?.[c]?.some(cell => cell.type !== '') ?? false);
+    const r = selectedCell.row;
+    const c = selectedCell.col;
 
-    // Entfernbar: KEIN aktives Element direkt darüber
-    const canRemove = (r: number, c: number) =>
-      !(r > 0 && activeAny(r - 1, c));
+    const activeAny = (row: number, col: number) =>
+      row >= 0 && row < nR && col >= 0 && col < nC &&
+      (state.grid[row]?.[col]?.some(cell => cell.type !== '') ?? false);
 
-    for (let r = 0; r < nR; r++) {
-      for (let c = 0; c < nC; c++) {
-        if (!activeAny(r, c)) continue;
-        if (!canRemove(r, c)) continue;
+    if (!activeAny(r, c)) return { removes };
 
-        const cx = xBase + (c + 0.5) * sEl;
-        const cy = yBase + (nR - r - 0.5) * sEl;
+    // Position: Zentrum des Würfels
+    const cx = (xBase + (c + 0.5) * sEl) * S;
+    const cy = (yBase + (nR - r - 0.5) * sEl) * S;
+    const cz = (zBase + nD * 0.5 * sEl) * S;
 
-        // Beste Außenfläche finden: die am weitesten vom Möbelzentrum entfernte freie Fläche
-        const free = {
-          top:   !activeAny(r - 1, c),
-          left:  !activeAny(r, c - 1),
-          right: !activeAny(r, c + 1),
-          front: true, // Vorderseite immer frei (Kameraseite)
-        };
-
-        // Priorität: rechts > links > oben > vorne (seitlich ist am sichtbarsten)
-        let px = cx * S, py = cy * S, pz = (zBase - 15) * S;
-
-        if (free.right) {
-          px = (xBase + (c + 1) * sEl + 15) * S;
-          py = cy * S;
-          pz = (zBase + totalD / 2) * S;
-        } else if (free.left) {
-          px = (xBase + c * sEl - 15) * S;
-          py = cy * S;
-          pz = (zBase + totalD / 2) * S;
-        } else if (free.top) {
-          px = cx * S;
-          py = (yBase + (nR - r) * sEl + 15) * S;
-          pz = (zBase + totalD / 2) * S;
-        } else {
-          // Nur vorne frei
-          px = cx * S;
-          py = cy * S;
-          pz = (zBase - 15) * S;
-        }
-
-        removes.push({ row: r, col: c, position: [px, py, pz] });
-      }
-    }
+    removes.push({ row: r, col: c, position: [cx, cy, cz] });
 
     return { removes };
-  }, [state.grid, state.cols, state.rows, state.depthLayers]);
+  }, [state.grid, state.cols, state.rows, state.depthLayers, selectedCell]);
 
   // Szene-Objekte in Gruppen aufteilen: Platten, Profile, Griffe, GLB-Strukturteile
   const PLATTE_TYPES = new Set(['seite_l','seite_r','boden','deckel','ruecken','zwischenboden','zwischenwand','fachboden','front']);

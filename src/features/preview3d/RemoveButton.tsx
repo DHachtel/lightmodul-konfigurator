@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Html } from '@react-three/drei';
 
 interface RemoveButtonProps {
@@ -7,34 +8,24 @@ interface RemoveButtonProps {
   onClick: () => void;
 }
 
-/** ×-Button zum Entfernen eines Elements — immer sichtbar, wird rot bei Hover */
+/** ×-Button zum Entfernen eines Elements — nur am selektierten Element, rot bei Hover */
 export default function RemoveButton({ position, onClick }: RemoveButtonProps) {
+  const [hovered, setHovered] = useState(false);
   return (
     <Html position={position} center style={{ pointerEvents: 'auto' }}>
-      <button
+      <div
         onClick={(e) => { e.stopPropagation(); onClick(); }}
-        onPointerDown={(e) => e.stopPropagation()}
+        onMouseEnter={() => { setHovered(true); document.body.style.cursor = 'pointer'; }}
+        onMouseLeave={() => { setHovered(false); document.body.style.cursor = ''; }}
         style={{
-          width: 24, height: 24, borderRadius: '50%',
-          background: 'rgba(23,22,20,0.45)',
-          border: '1.5px solid rgba(255,255,255,0.25)',
-          color: '#FAFAF8', fontSize: 13, fontWeight: 400,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', padding: 0, lineHeight: 1,
-          backdropFilter: 'blur(4px)',
-          transition: 'background 0.14s ease, transform 0.14s ease',
+          width: 32, height: 32, borderRadius: '50%',
+          background: hovered ? '#EF4444' : 'rgba(120,120,120,0.7)',
+          color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 16, fontWeight: 700, cursor: 'pointer',
+          transition: 'all 0.15s ease',
+          boxShadow: hovered ? '0 0 12px rgba(239,68,68,0.5)' : '0 1px 4px rgba(0,0,0,0.3)',
         }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = 'rgba(180,40,30,0.85)';
-          e.currentTarget.style.transform = 'scale(1.2)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'rgba(23,22,20,0.45)';
-          e.currentTarget.style.transform = 'scale(1)';
-        }}
-      >
-        ×
-      </button>
+      >×</div>
     </Html>
   );
 }
