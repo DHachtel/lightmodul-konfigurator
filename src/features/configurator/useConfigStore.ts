@@ -248,11 +248,10 @@ export function useConfigStore(): [ConfigState, ConfigActions, () => void] {
     addDepthFront: () => update(s => {
       if (s.depthLayers >= MAX_DEPTH) return s;
       const nD = s.depthLayers + 1;
-      // Neue Tiefenzelle: Typ der letzten Tiefenzelle kopieren (nicht leer)
+      // Neue Tiefenebene immer leer (nicht letzte Ebene kopieren)
       const grid: Grid = s.grid.map(rowArr =>
         rowArr.map(colArr => {
-          const last = colArr[colArr.length - 1];
-          return [...colArr, { type: last?.type ?? '', shelves: 0 }];
+          return [...colArr, newCell()];
         })
       );
       return { ...s, depthLayers: nD, grid };
