@@ -94,13 +94,13 @@ export function buildBOMRowsExtended(
 
   // -- Beratungstisch --
   if (bom.fachbodenBT > 0) {
-    addRow('Beratungstisch', 'Arbeitsplatte', bom.fachbodenBT, 'BT_Arbeitsplatte');
+    addRow('Beratungstisch', 'Arbeitsplatte', bom.fachbodenBT, 'BT_Fachboden');
     addRow('Beratungstisch', 'Profil 360mm', bom.profil360, 'BT_Profil', '360');
     if (bom.profil213 > 0) {
       addRow('Beratungstisch', 'Profil 213mm', bom.profil213, 'BT_Profil', '213');
     }
-    addRow('Beratungstisch', 'Worktop-Profile X 600mm', bom.worktopProfileX, 'BT_WorktopProfileX', '600');
-    addRow('Beratungstisch', 'Worktop-Profile Z 600mm', bom.worktopProfileZ, 'BT_WorktopProfileZ', '600');
+    addRow('Beratungstisch', 'Worktop-Profile X 600mm', bom.worktopProfileX, 'BT_Profil', '600');
+    addRow('Beratungstisch', 'Worktop-Profile Z 600mm', bom.worktopProfileZ, 'BT_Profil', '600');
     addRow('Beratungstisch', 'Zwischenwuerfel', bom.wuerfelBT, 'BT_Wuerfel');
   }
 

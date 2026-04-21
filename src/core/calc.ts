@@ -80,6 +80,11 @@ export function computeBOM(config: ConfigState): BOMResult | null {
   const pH: DimMap = {};  // vertikal (Y/Höhe)
   const pT: DimMap = {};  // Tiefe (Z)
 
+  // BT-Hilfsfunktion (wird auch in der Profil-Schleife benoetigt)
+  const isBTEarly = (r: number, c: number, d: number): boolean =>
+    (grid[r]?.[c]?.[d]?.type ?? '') === 'BT';
+  const btRk = nR - 1; // BT sitzt immer in der untersten Reihe
+
   // Horizontale Profile: verbinden Knoten (rk, ck, dk)↔(rk, ck+1, dk)
   for (let rk = 0; rk <= nR; rk++)
     for (let ck = 0; ck < nC; ck++)
@@ -90,9 +95,32 @@ export function computeBOM(config: ConfigState): BOMResult | null {
   // Vertikale Profile: verbinden Knoten (rk, ck, dk)↔(rk+1, ck, dk)
   for (let rk = 0; rk < nR; rk++)
     for (let ck = 0; ck <= nC; ck++)
-      for (let dk = 0; dk <= nD; dk++)
-        if (nodeActive(rk, ck, dk) && nodeActive(rk + 1, ck, dk))
-          addDim(pH, String(S), 1);
+      for (let dk = 0; dk <= nD; dk++) {
+        if (!nodeActive(rk, ck, dk) || !nodeActive(rk + 1, ck, dk)) continue;
+
+        // BT-Split: wo 360+Wuerfel+213 ein 600mm-Profil ersetzt
+        if (rk === btRk) {
+          // Pruefe ob dieser Knoten ein BT-Worktop-Knoten ist
+          let hasBTAdj = false;
+          for (let r2 = Math.max(0, btRk); r2 <= Math.min(nR - 1, btRk); r2++)
+            for (let c2 = Math.max(0, ck - 1); c2 <= Math.min(nC - 1, ck); c2++)
+              for (let d2 = Math.max(0, dk - 1); d2 <= Math.min(nD - 1, dk); d2++)
+                if (isBTEarly(r2, c2, d2)) hasBTAdj = true;
+
+          if (hasBTAdj) {
+            // Pruefe ob oberhalb ein regulaeres Modul existiert
+            let hasRegAbove = false;
+            for (let r2 = Math.max(0, btRk - 1); r2 <= Math.min(nR - 1, btRk); r2++)
+              for (let c2 = Math.max(0, ck - 1); c2 <= Math.min(nC - 1, ck); c2++)
+                for (let d2 = Math.max(0, dk - 1); d2 <= Math.min(nD - 1, dk); d2++)
+                  if (isActive(grid[r2]?.[c2]?.[d2] ?? { type: '' as CellType, shelves: 0 }) && !isBTEarly(r2, c2, d2))
+                    hasRegAbove = true;
+            if (hasRegAbove) continue; // Skip — ersetzt durch 360+213
+          }
+        }
+
+        addDim(pH, String(S), 1);
+      }
 
   // Tiefenprofile: verbinden Knoten (rk, ck, dk)↔(rk, ck, dk+1)
   for (let rk = 0; rk <= nR; rk++)
