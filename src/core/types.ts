@@ -7,7 +7,7 @@
  *   'RF' = Einlegerahmen Standard
  *   'RL' = Einlegerahmen beleuchtet
  */
-export type CellType = '' | 'O' | 'RF' | 'RL';
+export type CellType = '' | 'O' | 'RF' | 'RL' | 'BT';
 
 export interface Cell {
   type: CellType;
@@ -139,6 +139,20 @@ export interface BOMResult {
 
   // ── Fachböden ─────────────────────────────────────────────────────────────
   shelves: number;
+
+  // ── Beratungstisch ───────────────────────────────────────────────────────
+  /** Anzahl 360mm-Vertikalprofile (Erhoehung) */
+  profil360: number;
+  /** Anzahl 213mm-Vertikalprofile (Regalanschluss) */
+  profil213: number;
+  /** Anzahl Beratungstisch-Arbeitsplatten (= Fachboden auf Worktop-Rahmen) */
+  fachbodenBT: number;
+  /** Anzahl Zwischenwuerfel am Worktop-Niveau */
+  wuerfelBT: number;
+  /** Horizontale Worktop-Profile (600mm, X-Richtung am BT-Niveau) */
+  worktopProfileX: number;
+  /** Horizontale Worktop-Profile (600mm, Z-Richtung am BT-Niveau) */
+  worktopProfileZ: number;
 
   // ── Stellfüße ─────────────────────────────────────────────────────────────
   footerQty: number;
