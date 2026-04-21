@@ -299,6 +299,7 @@ export function computeModuleGeometry(state: ConfigState): SceneObject[] {
           position: [wx * s, -25 * s, wz * s],
           size:     [20 * s, 50 * s, 20 * s],
           color:    '#707070',
+          glbFile:  '/models/stellfuss-m6.glb',
           roughness: 0.6,
           metalness: 0.3,
         });
