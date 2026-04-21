@@ -70,6 +70,7 @@ function ConfiguratorShellInner() {
   const { market, currency, vatRate, currencySymbol: csym, setMarket } = useMarket();
 
   const [drill, drillActions] = useDrillDown();
+  const [placementType, setPlacementType] = useState<'O' | 'BT'>('O');
   const { pricing, loading: priceLoading } = useLivePrice(state, currency);
 
   const { user } = useUser();
@@ -408,6 +409,7 @@ function ConfiguratorShellInner() {
           onAddCell={handleAddCell}
           onSetCellType3D={handleSetCellType3D}
           onExpandAndActivate3D={handleExpandAndActivate3D}
+          placementType={placementType}
           onSetCol={actions.setCol}
           onSetRow={actions.setRow}
           showDimensions={showDimensions}
@@ -1061,7 +1063,7 @@ function ConfiguratorShellInner() {
           ) : drill.level === 'element' && drill.selectedCell ? (
             <SidebarElement state={state} actions={actions} row={drill.selectedCell.row} col={drill.selectedCell.col} />
           ) : (
-            <SidebarMoebel state={state} actions={actions} pgAvail={pgAvail} />
+            <SidebarMoebel state={state} actions={actions} pgAvail={pgAvail} placementType={placementType} onPlacementTypeChange={setPlacementType} />
           )}
         </div>
 

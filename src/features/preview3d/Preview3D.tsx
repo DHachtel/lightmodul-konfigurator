@@ -659,6 +659,8 @@ interface Preview3DProps {
   showDimensions?: boolean;
   /** Material-Debug-Panel anzeigen (?debug=true) */
   debugMode?: boolean;
+  /** Platziermodus: welcher Zelltyp bei Phantom-Klick platziert wird */
+  placementType?: 'O' | 'BT';
 }
 
 
@@ -682,6 +684,7 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
   bgColor = '#F5F2ED',
   showDimensions = false,
   debugMode = false,
+  placementType = 'O',
 }, ref) {
   // Material-Debug: Leva-Controls registrieren (Panel nur bei debugMode sichtbar)
   const debugValues = useMaterialDebugControls();
@@ -836,11 +839,24 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
   const handlePhantomClick = useCallback((phantom: PhantomPos) => {
     const { targetRow, targetCol, targetDepth, action } = phantom;
     if (action === 'internal') {
-      onSetCellType3D?.(targetRow, targetCol, targetDepth, 'O');
+      onSetCellType3D?.(targetRow, targetCol, targetDepth, placementType);
     } else {
-      onExpandAndActivate3D?.(targetRow, targetCol, targetDepth);
+      // expandAndActivate3D nutzt BT-Propagation im Store — fuer BT-Modus
+      // setzen wir den Typ nach der Expansion explizit
+      if (placementType === 'BT') {
+        onExpandAndActivate3D?.(targetRow, targetCol, targetDepth);
+        // BT-Typ wird durch Propagation im Store gesetzt wenn Nachbar BT ist,
+        // oder wir setzen es explizit nach Expansion
+        setTimeout(() => {
+          onSetCellType3D?.(
+            Math.max(0, targetRow), Math.max(0, targetCol), Math.max(0, targetDepth), 'BT'
+          );
+        }, 0);
+      } else {
+        onExpandAndActivate3D?.(targetRow, targetCol, targetDepth);
+      }
     }
-  }, [onSetCellType3D, onExpandAndActivate3D]);
+  }, [onSetCellType3D, onExpandAndActivate3D, placementType]);
 
   // ── Remove Buttons: 1 × pro entfernbarem Element, am nächsten Außenrand ──
   const cellButtons = useMemo(() => {
