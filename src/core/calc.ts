@@ -163,7 +163,7 @@ export function computeBOM(config: ConfigState): BOMResult | null {
     for (let c = 0; c < nC; c++)
       for (let d = 0; d < nD; d++) {
         if (!isBT(r, c, d)) continue;
-        fachbodenBT++;
+        fachbodenBT += 3;
       }
 
   if (fachbodenBT > 0) {

@@ -408,27 +408,51 @@ export function computeModuleGeometry(state: ConfigState): SceneObject[] {
     }
   }
 
-  // Worktop-Fachboden (Arbeitsplatte)
+  // Worktop-Fachboden: 3 Ebenen pro BT-Zelle (unten, mitte, oben)
   for (let r = 0; r < nR; r++) {
     for (let c = 0; c < nC; c++) {
       for (let d = 0; d < nD; d++) {
         if (!isBTCell(r, c, d)) continue;
 
         const cellCenterX = xBase + (c + 0.5) * S;
-        const worktopY = yBase + (nR - r) * S + BT_UP;
         const cellCenterZ = zBase + (d + 0.5) * S;
+        const shelfSize: [number, number, number] = [(S - P * 2) * s, 8 * s, (S - P * 2) * s];
+        const shelfColor = '#C0B8A8';
 
+        // Unterer Fachboden (Bodenniveau, Y = Unterkante Basiskubus)
+        const yBottom = yBase + (nR - r - 1) * S;
         objs.push({
-          id:       `bt_shelf_r${r}_c${c}_d${d}`,
+          id:       `bt_shelf_bot_r${r}_c${c}_d${d}`,
           partType: 'fachboden',
-          position: [cellCenterX * s, worktopY * s, cellCenterZ * s],
-          size:     [(S - P * 2) * s, 8 * s, (S - P * 2) * s],
-          color:    '#C0B8A8',
-          row:      r,
-          col:      c,
-          depth:    d,
-          roughness: 0.8,
-          metalness: 0.0,
+          position: [cellCenterX * s, yBottom * s, cellCenterZ * s],
+          size:     shelfSize,
+          color:    shelfColor,
+          row: r, col: c, depth: d,
+          roughness: 0.8, metalness: 0.0,
+        });
+
+        // Mittlerer Fachboden (Oberkante Basiskubus, Y = 600mm ueber Unterkante)
+        const yMiddle = yBase + (nR - r) * S;
+        objs.push({
+          id:       `bt_shelf_mid_r${r}_c${c}_d${d}`,
+          partType: 'fachboden',
+          position: [cellCenterX * s, yMiddle * s, cellCenterZ * s],
+          size:     shelfSize,
+          color:    shelfColor,
+          row: r, col: c, depth: d,
+          roughness: 0.8, metalness: 0.0,
+        });
+
+        // Oberer Fachboden / Arbeitsplatte (Worktop-Niveau, Y = 960mm)
+        const yTop = yBase + (nR - r) * S + BT_UP;
+        objs.push({
+          id:       `bt_shelf_top_r${r}_c${c}_d${d}`,
+          partType: 'fachboden',
+          position: [cellCenterX * s, yTop * s, cellCenterZ * s],
+          size:     shelfSize,
+          color:    shelfColor,
+          row: r, col: c, depth: d,
+          roughness: 0.8, metalness: 0.0,
         });
       }
     }
