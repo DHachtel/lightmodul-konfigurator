@@ -24,6 +24,11 @@ export const PROFILE_SIZE_MM = 25;
 /** Alu-Würfel-Kantenlänge 27 mm */
 export const CUBE_SIZE_MM = 27;
 
+/** Beratungstisch: Erhoehungsprofil 360mm */
+export const BT_PROFILE_UPPER_MM = 360;
+/** Beratungstisch: Anschlussprofil 213mm (360 + 27 + 213 = 600) */
+export const BT_PROFILE_LOWER_MM = 213;
+
 // ─── Hardware-Mengen pro Alu-Würfel (Montagereferenz) ────────────────────────
 
 export const HW_M4_PER_CUBE = 4;
@@ -58,6 +63,7 @@ export const CELL_TYPES: CellTypeOption[] = [
   { v: 'O',  l: 'Offen (kein Rahmen)'     },
   { v: 'RF', l: 'Einlegerahmen Standard'   },
   { v: 'RL', l: 'Einlegerahmen beleuchtet' },
+  { v: 'BT', l: 'Beratungstisch'           },
 ];
 
 // ─── Stellfüße ───────────────────────────────────────────────────────────────
