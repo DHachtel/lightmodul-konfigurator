@@ -111,6 +111,7 @@ const DEFAULT: ConfigState = {
   profileColor: 'SW',
   footer:       'stell_m6',
   opts:         { footer: true, shelves: false },
+  frames:       {},
 };
 
 // ── Typen ────────────────────────────────────────────────────────────────────
@@ -142,6 +143,9 @@ export interface ConfigActions {
   setCellType3D(r: number, c: number, d: number, t: CellType): void;
   /** Grid erweitern + 1 Zelle bei (targetR, targetC, targetD) aktivieren */
   expandAndActivate3D(targetR: number, targetC: number, targetD: number, cellType?: CellType): void;
+  // Produktrahmen
+  toggleFrame(faceId: string): void;
+  setAllFrames(faceIds: string[], on: boolean): void;
   // Fehler-State
   gravityError: string | null;
   clearGravityError(): void;
@@ -522,6 +526,27 @@ export function useConfigStore(): [ConfigState, ConfigActions, () => void] {
         return next;
       });
     },
+
+    // ── Produktrahmen ───────────────────────────────────────────────────
+    toggleFrame: (faceId) => update(s => {
+      const frames = { ...s.frames };
+      if (frames[faceId]) {
+        delete frames[faceId];
+      } else {
+        frames[faceId] = true;
+      }
+      return { ...s, frames };
+    }),
+
+    setAllFrames: (faceIds, on) => update(s => {
+      const frames = { ...s.frames };
+      if (on) {
+        for (const id of faceIds) frames[id] = true;
+      } else {
+        for (const id of faceIds) delete frames[id];
+      }
+      return { ...s, frames };
+    }),
 
     // ── Fehler-State ──────────────────────────────────────────────────────
     gravityError,

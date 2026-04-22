@@ -253,6 +253,9 @@ export function computeBOM(config: ConfigState): BOMResult | null {
         }
       }
 
+  // ── Produktrahmen ────────────────────────────────────────────────────
+  const produktrahmen = Object.values(config.frames ?? {}).filter(Boolean).length;
+
   // ── Validierungswarnungen ─────────────────────────────────────────────────
   const warnings: string[] = [];
   if (nC > 8) warnings.push(`Maximalbreite überschritten (max. 8 Elemente, aktuell ${nC})`);
@@ -267,6 +270,7 @@ export function computeBOM(config: ConfigState): BOMResult | null {
     shelves,
     profil360, profil213, fachbodenBT, wuerfelBT,
     worktopProfileX, worktopProfileZ,
+    produktrahmen,
     footerQty, footer,
     schraubenM4: (wuerfel + wuerfelBT) * HW_M4_PER_CUBE,
     schraubenM6: (wuerfel + wuerfelBT) * HW_M6_PER_CUBE,

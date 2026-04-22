@@ -409,6 +409,13 @@ export default function BOMPanel({ state, committedBOM, moebelId, onCommit, capt
           </Group>
         )}
 
+        {bom.produktrahmen > 0 && (
+          <Group title="Produktrahmen" total={bom.produktrahmen} csym={csym}>
+            <BRow name="Produktrahmen LightModul" sub="" qty={bom.produktrahmen} csym={csym}
+              pi={pr('Produktrahmen', undefined, bom.produktrahmen)} />
+          </Group>
+        )}
+
         {/* -- Preisberechnung -- */}
         <PriceSection pricing={pricing} loading={priceLoading} />
 

@@ -55,6 +55,8 @@ export interface ConfigState {
   /** Fußtyp-Code: FOOTERS[].v */
   footer: string;
   opts: ConfigOpts;
+  /** Produktrahmen-Zuordnung: faceId → true (bestueckt) */
+  frames: Record<string, boolean>;
 }
 
 // ─── Preissystem ─────────────────────────────────────────────────────────────
@@ -153,6 +155,10 @@ export interface BOMResult {
   worktopProfileX: number;
   /** Horizontale Worktop-Profile (600mm, Z-Richtung am BT-Niveau) */
   worktopProfileZ: number;
+
+  // ── Produktrahmen ────────────────────────────────────────────────────────
+  /** Anzahl platzierter Produktrahmen */
+  produktrahmen: number;
 
   // ── Stellfüße ─────────────────────────────────────────────────────────────
   footerQty: number;

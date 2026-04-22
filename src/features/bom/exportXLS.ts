@@ -104,6 +104,11 @@ export function buildBOMRowsExtended(
     addRow('Beratungstisch', 'Zwischenwuerfel', bom.wuerfelBT, 'BT_Wuerfel');
   }
 
+  // -- Produktrahmen --
+  if (bom.produktrahmen > 0) {
+    addRow('Produktrahmen', 'Produktrahmen LightModul', bom.produktrahmen, 'Produktrahmen');
+  }
+
   // -- Summenzeile --
   if (hasPrice) {
     const gesamtCol = header.indexOf('Gesamtpreis');

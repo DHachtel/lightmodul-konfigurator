@@ -23,6 +23,8 @@ export const ConfigStateSchema = z.object({
     footer:  z.boolean().optional().default(true),
     shelves: z.boolean().optional().default(false),
   }),
+  /** Produktrahmen-Zuordnung: faceId → true */
+  frames: z.record(z.string(), z.boolean()).optional().default({}),
 });
 
 // ─── Request Schemas ─────────────────────────────────────────────────────────
