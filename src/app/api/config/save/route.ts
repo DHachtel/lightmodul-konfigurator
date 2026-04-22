@@ -44,8 +44,8 @@ export async function POST(req: NextRequest) {
 
       // 23505 = unique_violation — erneut versuchen
       if (error.code !== '23505') {
-        console.error('[/api/config/save] DB-Fehler:', error?.code, error?.message);
-        return NextResponse.json({ error: 'Speichern fehlgeschlagen' }, { status: 500 });
+        console.error('[/api/config/save] DB-Fehler:', error?.code, error?.message, error?.details, error?.hint);
+        return NextResponse.json({ error: `DB: ${error.code} — ${error.message}` }, { status: 500 });
       }
     }
 
