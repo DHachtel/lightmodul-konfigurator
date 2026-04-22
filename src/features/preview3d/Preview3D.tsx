@@ -859,13 +859,23 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
     const yBase = 0;
     const zBase = -totalD / 2;
 
+    // Hilfsfunktion: ist Nachbar aktiv?
+    const isActive = (r: number, c: number, d: number) =>
+      r >= 0 && r < nR && c >= 0 && c < nC && d >= 0 && d < nD &&
+      (state.grid[r]?.[c]?.[d]?.type ?? '') !== '';
+
     for (let r = 0; r < nR; r++) {
       for (let c = 0; c < nC; c++) {
         for (let d = 0; d < nD; d++) {
-          const cellType = state.grid[r]?.[c]?.[d]?.type ?? '';
-          if (cellType === '') continue;
+          if (!isActive(r, c, d)) continue;
 
-          // Position: Zentrum des einzelnen Wuerfels
+          // Nur Rand-Elemente: mindestens 1 Nachbar leer oder außerhalb
+          const allNeighborsActive =
+            isActive(r - 1, c, d) && isActive(r + 1, c, d) &&
+            isActive(r, c - 1, d) && isActive(r, c + 1, d) &&
+            isActive(r, c, d - 1) && isActive(r, c, d + 1);
+          if (allNeighborsActive) continue;
+
           const cx = (xBase + (c + 0.5) * sEl) * S;
           const cy = (yBase + (nR - r - 0.5) * sEl) * S;
           const cz = (zBase + (d + 0.5) * sEl) * S;

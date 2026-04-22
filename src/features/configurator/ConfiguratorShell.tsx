@@ -220,11 +220,15 @@ function ConfiguratorShellInner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ config: state, screenshot, bom }),
       });
-      if (!res.ok) throw new Error('Save failed');
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(body.error || `HTTP ${res.status}`);
+      }
       const { code } = await res.json() as { code: number };
       actions.setMoebelId(code);
-    } catch {
-      alert('Speichern fehlgeschlagen');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Unbekannter Fehler';
+      alert(`Speichern fehlgeschlagen: ${msg}`);
     } finally {
       setSaveLoading(false);
     }

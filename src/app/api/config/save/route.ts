@@ -17,7 +17,9 @@ export async function POST(req: NextRequest) {
 
   const parsed = ConfigSaveSchema.safeParse(rawBody);
   if (!parsed.success) {
-    return NextResponse.json({ error: formatZodError(parsed.error) }, { status: 400 });
+    const detail = formatZodError(parsed.error);
+    console.error('[/api/config/save] Validierungsfehler:', detail);
+    return NextResponse.json({ error: `Validierung: ${detail}` }, { status: 400 });
   }
 
   const { config, screenshot, bom } = parsed.data;
