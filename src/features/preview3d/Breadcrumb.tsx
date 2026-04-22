@@ -16,13 +16,9 @@ type NavItem = {
 };
 
 export default function Breadcrumb({ level, selectedCell, onGoToLevel }: BreadcrumbProps) {
-  const elementLabel = selectedCell
-    ? `R${selectedCell.row + 1}/C${selectedCell.col + 1}`
-    : 'Produktrahmen';
-
   const items: NavItem[] = [
     { label: 'Shop', level: 'shop' as DrillLevel, active: level === 'shop', reachable: true },
-    { label: elementLabel, level: 'produktrahmen' as DrillLevel, active: level === 'produktrahmen', reachable: !!selectedCell },
+    { label: 'Produktrahmen', level: 'produktrahmen' as DrillLevel, active: level === 'produktrahmen', reachable: true },
   ];
 
   return (

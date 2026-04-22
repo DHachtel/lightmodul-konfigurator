@@ -1111,8 +1111,8 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
         </group>
       </Suspense>
 
-      {/* Grüner Highlight-Rahmen — je nach Drill-Down-Ebene */}
-      {selectedCell && drillLevel === 'produktrahmen' && (
+      {/* Gruener Highlight-Rahmen — bei selektiertem Element in beiden Ebenen */}
+      {selectedCell && (
         <SelectionHighlight objects={objects} row={selectedCell.row} col={selectedCell.col} />
       )}
 
