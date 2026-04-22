@@ -3,7 +3,7 @@ import { MAX_COLS, MAX_ROWS, MAX_DEPTH, ELEMENT_SIZE_MM } from '@/core/constants
 
 // ─── Cell & Grid Schemas ─────────────────────────────────────────────────────
 
-export const CellTypeSchema = z.enum(['', 'O', 'RF', 'RL']);
+export const CellTypeSchema = z.enum(['', 'O', 'RF', 'RL', 'BT']);
 
 export const CellSchema = z.object({
   type:    CellTypeSchema,

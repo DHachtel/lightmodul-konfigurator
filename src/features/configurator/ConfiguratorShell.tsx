@@ -111,8 +111,8 @@ function ConfiguratorShellInner() {
     actions.expandAndActivate3D(r, c, d, cellType);
   }, [actions]);
 
-  const handleRemoveElement = useCallback((row: number, col: number) => {
-    actions.setType(row, col, '');
+  const handleRemoveElement = useCallback((row: number, col: number, depth: number) => {
+    actions.setCellType3D(row, col, depth, '');
   }, [actions]);
 
   const handleAddCell = useCallback((row: number, col: number) => {

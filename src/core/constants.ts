@@ -8,9 +8,9 @@ export const ELEMENT_SIZE_MM = 600;
 // ─── Grid-Grenzen ────────────────────────────────────────────────────────────
 
 /** Maximale Anzahl Elemente pro Achse */
-export const MAX_COLS    = 8;   // Breite
-export const MAX_ROWS    = 5;   // Höhe
-export const MAX_DEPTH   = 4;   // Tiefe (Anzahl Elemente in Z-Richtung)
+export const MAX_COLS    = 6;   // Breite
+export const MAX_ROWS    = 6;   // Höhe
+export const MAX_DEPTH   = 6;   // Tiefe (Anzahl Elemente in Z-Richtung)
 
 export const MIN_COLS  = 1;
 export const MIN_ROWS  = 1;

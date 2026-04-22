@@ -601,8 +601,8 @@ interface Preview3DProps {
   onSetCellType3D?: (r: number, c: number, d: number, t: CellType) => void;
   /** True 3D: Grid erweitern + 1 Zelle aktivieren */
   onExpandAndActivate3D?: (r: number, c: number, d: number, cellType?: CellType) => void;
-  /** Element entfernen (row, col) */
-  onRemoveElement?: (row: number, col: number) => void;
+  /** Element entfernen (row, col, depth) */
+  onRemoveElement?: (row: number, col: number, depth: number) => void;
   /** Leere Zelle mit 'O' füllen (row, col) */
   onAddCell?: (row: number, col: number) => void;
   /** Spaltenbreite setzen */
@@ -842,9 +842,9 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
     }
   }, [onSetCellType3D, onExpandAndActivate3D, placementType, state.rows.length]);
 
-  // ── Remove Buttons: X an jedem aktiven Element (sichtbar per Hover) ──
+  // ── Remove Buttons: X an jedem aktiven Element (pro Zelle r,c,d) ──
   const cellButtons = useMemo(() => {
-    const removes: { row: number; col: number; position: [number, number, number] }[] = [];
+    const removes: { row: number; col: number; depth: number; position: [number, number, number] }[] = [];
 
     // Keine X-Buttons im Produktrahmen-Modus
     if (drillLevel === 'produktrahmen') return { removes };
@@ -859,20 +859,19 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
     const yBase = 0;
     const zBase = -totalD / 2;
 
-    const activeAny = (row: number, col: number) =>
-      row >= 0 && row < nR && col >= 0 && col < nC &&
-      (state.grid[row]?.[col]?.some(cell => cell.type !== '') ?? false);
-
     for (let r = 0; r < nR; r++) {
       for (let c = 0; c < nC; c++) {
-        if (!activeAny(r, c)) continue;
+        for (let d = 0; d < nD; d++) {
+          const cellType = state.grid[r]?.[c]?.[d]?.type ?? '';
+          if (cellType === '') continue;
 
-        // Position: Zentrum des Wuerfels
-        const cx = (xBase + (c + 0.5) * sEl) * S;
-        const cy = (yBase + (nR - r - 0.5) * sEl) * S;
-        const cz = (zBase + nD * 0.5 * sEl) * S;
+          // Position: Zentrum des einzelnen Wuerfels
+          const cx = (xBase + (c + 0.5) * sEl) * S;
+          const cy = (yBase + (nR - r - 0.5) * sEl) * S;
+          const cz = (zBase + (d + 0.5) * sEl) * S;
 
-        removes.push({ row: r, col: c, position: [cx, cy, cz] });
+          removes.push({ row: r, col: c, depth: d, position: [cx, cy, cz] });
+        }
       }
     }
 
@@ -1143,9 +1142,9 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
       <group name="cell-buttons">
         {cellButtons.removes.map(rp => (
           <RemoveButton
-            key={`rm_${rp.row}_${rp.col}`}
+            key={`rm_${rp.row}_${rp.col}_${rp.depth}`}
             position={rp.position}
-            onClick={() => onRemoveElement?.(rp.row, rp.col)}
+            onClick={() => onRemoveElement?.(rp.row, rp.col, rp.depth)}
           />
         ))}
       </group>
