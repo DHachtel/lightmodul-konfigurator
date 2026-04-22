@@ -368,7 +368,7 @@ function buildZip(files: Record<string, string>): Uint8Array {
       20, 0, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       ...u32(crc), ...u32(size), ...u32(size),
       ...u16(nameBytes.length),
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       ...u32(offset), ...nameBytes,
     ]);
     centralDir.push(central);
