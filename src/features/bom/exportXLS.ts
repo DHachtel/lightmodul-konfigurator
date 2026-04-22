@@ -286,7 +286,7 @@ export async function downloadXLSXExtended(
 ): Promise<void> {
   const zip = generateXLSXBytes(rows, overrideRows);
   const blob = new Blob(
-    [zip.buffer as ArrayBuffer],
+    [new Uint8Array(zip) as BlobPart],
     { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
   );
 
