@@ -22,6 +22,7 @@ const ExtrudeGeometryCtor = (THREE as Record<string, unknown>).ExtrudeGeometry a
   new (shape: unknown, options: { depth: number; bevelEnabled: boolean }) => THREE.BufferGeometry;
 import type { CellType, ConfigState } from '@/core/types';
 import { ELEMENT_SIZE_MM, MAT_BY_V, MATERIALS, MAX_COLS, MAX_ROWS, MAX_DEPTH } from '@/core/constants';
+import { computeAvailableFaces } from '@/core/faces';
 import { useModuleGeometry, type SceneObject } from './useModuleGeometry';
 import SmartMesh from './SmartMesh';
 import RemoveButton from './RemoveButton';
@@ -180,6 +181,37 @@ function PhantomElement({ position, size, onClick }: {
         </Html>
       )}
     </group>
+  );
+}
+
+// ── FacePlane — klickbare Fläche für Produktrahmen-Platzierung ───────────────
+
+function FacePlane({ position, size, hasFrame, onClick }: {
+  faceId: string;  // fuer key-Prop, nicht direkt genutzt
+  position: [number, number, number];
+  size: [number, number, number];
+  hasFrame: boolean;
+  onClick: () => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <mesh
+      position={position}
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer'; }}
+      onPointerOut={() => { setHovered(false); document.body.style.cursor = ''; }}
+    >
+      <boxGeometry args={size} />
+      <meshStandardMaterial
+        color={hasFrame ? '#8090a0' : '#aaaaaa'}
+        transparent
+        opacity={hasFrame ? 0.85 : (hovered ? 0.2 : 0.0)}
+        roughness={hasFrame ? 0.4 : 0.9}
+        metalness={hasFrame ? 0.6 : 0.0}
+        depthWrite={hasFrame}
+      />
+    </mesh>
   );
 }
 
@@ -624,6 +656,10 @@ interface Preview3DProps {
   debugMode?: boolean;
   /** Platziermodus: welcher Zelltyp bei Phantom-Klick platziert wird */
   placementType?: 'O' | 'BT';
+  /** Produktrahmen toggle */
+  onToggleFrame?: (faceId: string) => void;
+  /** Aktuelle frames */
+  frames?: Record<string, boolean>;
 }
 
 
@@ -647,6 +683,8 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
   showDimensions = false,
   debugMode = false,
   placementType = 'O',
+  onToggleFrame,
+  frames = {},
 }, ref) {
   // Material-Debug: Leva-Controls registrieren (Panel nur bei debugMode sichtbar)
   const debugValues = useMaterialDebugControls();
@@ -693,6 +731,13 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
 
   const objects = useModuleGeometry(state);
 
+  // ── Produktrahmen: verfuegbare Flaechen berechnen ──
+  const availableFaces = useMemo(() => {
+    if (drillLevel !== 'produktrahmen') return [];
+    const faceSet = computeAvailableFaces(state.grid, state.cols.length, state.depthLayers);
+    return Array.from(faceSet);
+  }, [drillLevel, state.grid, state.cols.length, state.depthLayers]);
+
   // ── Phantom Elements: Ghost-Boxen für Grid-Erweiterung ──
   interface PhantomPos {
     id: string;
@@ -705,6 +750,7 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
   }
 
   const phantomElements = useMemo<PhantomPos[]>(() => {
+    if (drillLevel === 'produktrahmen') return [];
     const phantoms: PhantomPos[] = [];
     const nR = state.rows.length;
     const nC = state.cols.length;
@@ -798,7 +844,7 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
     }
 
     return phantoms;
-  }, [state.grid, state.cols, state.rows, state.depthLayers]);
+  }, [drillLevel, state.grid, state.cols, state.rows, state.depthLayers]);
 
   // Phantom Element Klick-Handler — true 3D
   const handlePhantomClick = useCallback((phantom: PhantomPos) => {
@@ -839,6 +885,8 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
   const cellButtons = useMemo(() => {
     const removes: { row: number; col: number; position: [number, number, number] }[] = [];
 
+    // Keine X-Buttons im Produktrahmen-Modus
+    if (drillLevel === 'produktrahmen') return { removes };
     // Nur X-Button am selektierten Element anzeigen
     if (!selectedCell) return { removes };
 
@@ -869,7 +917,7 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
     removes.push({ row: r, col: c, position: [cx, cy, cz] });
 
     return { removes };
-  }, [state.grid, state.cols, state.rows, state.depthLayers, selectedCell]);
+  }, [drillLevel, state.grid, state.cols, state.rows, state.depthLayers, selectedCell]);
 
   // Szene-Objekte in Gruppen aufteilen: Platten, Profile, Griffe, GLB-Strukturteile
   const PLATTE_TYPES = new Set(['seite_l','seite_r','boden','deckel','ruecken','zwischenboden','zwischenwand','fachboden','front']);
@@ -1066,6 +1114,60 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
       {/* Grüner Highlight-Rahmen — je nach Drill-Down-Ebene */}
       {selectedCell && drillLevel === 'produktrahmen' && (
         <SelectionHighlight objects={objects} row={selectedCell.row} col={selectedCell.col} />
+      )}
+
+      {/* Produktrahmen-Flaechen — nur in produktrahmen-Ebene */}
+      {drillLevel === 'produktrahmen' && (
+        <group name="produktrahmen-faces">
+          {availableFaces.map(faceId => {
+            const m = faceId.match(/^face_r(\d+)_c(\d+)_d(\d+)_(front|back|left|right)$/);
+            if (!m) return null;
+            const fr = parseInt(m[1]), fc = parseInt(m[2]), fd = parseInt(m[3]), side = m[4];
+
+            const nR = state.rows.length;
+            const nC = state.cols.length;
+            const nD = state.depthLayers;
+            const sEl = ELEMENT_SIZE_MM;
+            const totalW = nC * sEl;
+            const totalD = nD * sEl;
+            const xB = -totalW / 2;
+            const yB = 0;
+            const zB = -totalD / 2;
+            const P_FACE = 25; // Profil-Außenmaß mm
+            const faceSize = (sEl - P_FACE * 2) * S; // 550mm in Three.js-Einheiten
+            const faceThick = 12 * S; // 12mm Dicke
+
+            const cellCX = (xB + (fc + 0.5) * sEl) * S;
+            const cellCY = (yB + (nR - fr - 0.5) * sEl) * S;
+            const cellCZ = (zB + (fd + 0.5) * sEl) * S;
+
+            let px = cellCX, py = cellCY, pz = cellCZ;
+            let w = faceSize, h = faceSize, d = faceThick;
+
+            if (side === 'front') {
+              pz = (zB + fd * sEl) * S;
+            } else if (side === 'back') {
+              pz = (zB + (fd + 1) * sEl) * S;
+            } else if (side === 'left') {
+              px = (xB + fc * sEl) * S;
+              w = faceThick; d = faceSize;
+            } else if (side === 'right') {
+              px = (xB + (fc + 1) * sEl) * S;
+              w = faceThick; d = faceSize;
+            }
+
+            return (
+              <FacePlane
+                key={faceId}
+                faceId={faceId}
+                position={[px, py, pz]}
+                size={[w, h, d]}
+                hasFrame={!!frames[faceId]}
+                onClick={() => onToggleFrame?.(faceId)}
+              />
+            );
+          })}
+        </group>
       )}
 
       {/* Phantom Elements — Ghost-Boxen fuer Grid-Erweiterung */}

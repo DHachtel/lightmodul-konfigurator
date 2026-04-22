@@ -18,7 +18,7 @@ import type { ThreeCanvasHandle } from '@/features/preview3d/Preview3D';
 import type { CellType, ConfigState } from '@/core/types';
 // GhostSide nicht mehr benötigt — Ghost Zones arbeiten jetzt zellbasiert
 import SidebarMoebel from './SidebarMoebel';
-import SidebarElement from './SidebarElement';
+import SidebarProduktrahmen from './SidebarProduktrahmen';
 
 /** Gesamttiefe in mm (Rastermaß × Ebenen + Profil-Überhang) */
 function totalDepthMM(state: ConfigState): number {
@@ -408,6 +408,8 @@ function ConfiguratorShellInner() {
           onSetCellType3D={handleSetCellType3D}
           onExpandAndActivate3D={handleExpandAndActivate3D}
           placementType={placementType}
+          onToggleFrame={(faceId) => actions.toggleFrame(faceId)}
+          frames={state.frames}
           onSetCol={actions.setCol}
           onSetRow={actions.setRow}
           showDimensions={showDimensions}
@@ -1055,8 +1057,8 @@ function ConfiguratorShellInner() {
         overflowX: 'hidden',
       }}>
         <div style={{ flex: 1, overflowY: 'auto' }}>
-          {drill.level === 'produktrahmen' && drill.selectedCell ? (
-            <SidebarElement state={state} actions={actions} row={drill.selectedCell.row} col={drill.selectedCell.col} />
+          {drill.level === 'produktrahmen' ? (
+            <SidebarProduktrahmen state={state} actions={actions} />
           ) : (
             <SidebarMoebel state={state} actions={actions} pgAvail={pgAvail} placementType={placementType} onPlacementTypeChange={setPlacementType} />
           )}
