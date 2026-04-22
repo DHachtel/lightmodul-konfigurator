@@ -91,6 +91,29 @@ export function computeModuleGeometry(state: ConfigState): SceneObject[] {
     return false;
   };
 
+  // Kanten-Checks: Profil nur zeichnen wenn min. 1 Zelle an der Kante aktiv
+  // X-Profil bei (rk,ck,dk)→(rk,ck+1,dk): Zellen in Spalte ck pruefen
+  const xEdgeActive = (rk: number, ck: number, dk: number): boolean => {
+    for (let r = Math.max(0, rk - 1); r <= Math.min(nR - 1, rk); r++)
+      for (let d = Math.max(0, dk - 1); d <= Math.min(nD - 1, dk); d++)
+        if (isActive(r, ck, d)) return true;
+    return false;
+  };
+  // Y-Profil bei (rk,ck,dk)→(rk+1,ck,dk): Zellen in Zeile rk pruefen
+  const yEdgeActive = (rk: number, ck: number, dk: number): boolean => {
+    for (let c = Math.max(0, ck - 1); c <= Math.min(nC - 1, ck); c++)
+      for (let d = Math.max(0, dk - 1); d <= Math.min(nD - 1, dk); d++)
+        if (isActive(rk, c, d)) return true;
+    return false;
+  };
+  // Z-Profil bei (rk,ck,dk)→(rk,ck,dk+1): Zellen in Tiefe dk pruefen
+  const zEdgeActive = (rk: number, ck: number, dk: number): boolean => {
+    for (let r = Math.max(0, rk - 1); r <= Math.min(nR - 1, rk); r++)
+      for (let c = Math.max(0, ck - 1); c <= Math.min(nC - 1, ck); c++)
+        if (isActive(r, c, dk)) return true;
+    return false;
+  };
+
   // ── Beratungstisch-Hilfsfunktionen ──────────────────────────────────────
   const BT_UP = BT_PROFILE_UPPER_MM;  // 360mm
   const BT_LO = BT_PROFILE_LOWER_MM;  // 213mm
@@ -154,7 +177,7 @@ export function computeModuleGeometry(state: ConfigState): SceneObject[] {
   for (let rk = 0; rk <= nR; rk++) {
     for (let ck = 0; ck < nC; ck++) {
       for (let dk = 0; dk <= nD; dk++) {
-        if (!nodeActive(rk, ck, dk) || !nodeActive(rk, ck + 1, dk)) continue;
+        if (!xEdgeActive(rk, ck, dk)) continue;
 
         const wx = xBase + ck * S + S / 2;
         const wy = yBase + (nR - rk) * S;
@@ -181,7 +204,7 @@ export function computeModuleGeometry(state: ConfigState): SceneObject[] {
   for (let rk = 0; rk < nR; rk++) {
     for (let ck = 0; ck <= nC; ck++) {
       for (let dk = 0; dk <= nD; dk++) {
-        if (!nodeActive(rk, ck, dk) || !nodeActive(rk + 1, ck, dk)) continue;
+        if (!yEdgeActive(rk, ck, dk)) continue;
 
         // BT-Split: wo 360+Wuerfel+213 ein 600mm-Profil ersetzt
         if (rk === btRk && btNodeActive(btRk, ck, dk)) {
@@ -221,7 +244,7 @@ export function computeModuleGeometry(state: ConfigState): SceneObject[] {
   for (let rk = 0; rk <= nR; rk++) {
     for (let ck = 0; ck <= nC; ck++) {
       for (let dk = 0; dk < nD; dk++) {
-        if (!nodeActive(rk, ck, dk) || !nodeActive(rk, ck, dk + 1)) continue;
+        if (!zEdgeActive(rk, ck, dk)) continue;
 
         const wx = xBase + ck * S;
         const wy = yBase + (nR - rk) * S;
