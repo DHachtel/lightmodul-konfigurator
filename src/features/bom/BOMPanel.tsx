@@ -367,9 +367,11 @@ export default function BOMPanel({ state, committedBOM, moebelId, onCommit, capt
         )}
 
         {bom.shelves > 0 && (
-          <Group title="Fachboeden" total={bom.shelves} csym={csym}>
+          <Group title="Fachboeden" total={bom.shelves + bom.profilMitSteg} csym={csym}>
             <BRow name="Fachboden" sub="" qty={bom.shelves} csym={csym}
               pi={pr('Fachboden', undefined, bom.shelves)} />
+            <BRow name="Profil mit Steg 600mm" sub="Auflage vorne + hinten" qty={bom.profilMitSteg} csym={csym}
+              pi={pr('ProfilMitSteg', '600', bom.profilMitSteg)} />
           </Group>
         )}
 

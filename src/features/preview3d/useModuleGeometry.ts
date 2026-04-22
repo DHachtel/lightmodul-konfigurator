@@ -284,8 +284,79 @@ export function computeModuleGeometry(state: ConfigState): SceneObject[] {
     }
   }
 
-  // ── Stellfüße ─────────────────────────────────────────────────────────────
+  // ── Fachböden + Profile mit Steg (reguläre Zellen) ─────────────────────────
+  // Jeder Fachboden wird als flache Platte dargestellt.
+  // Jeder Fachboden hat 2x Profil mit Steg als Auflage (vorne + hinten).
+  const STEG_COLOR = '#a04040'; // Rot-Braun wie in der Farbskizze
+  for (let r = 0; r < nR; r++) {
+    for (let c = 0; c < nC; c++) {
+      for (let d = 0; d < nD; d++) {
+        const cell = grid[r]?.[c]?.[d];
+        if (!cell || cell.type === '' || cell.type === 'BT' || cell.shelves <= 0) continue;
+
+        const cellCenterX = xBase + (c + 0.5) * S;
+        const cellCenterZ = zBase + (d + 0.5) * S;
+        const cellBottomY = yBase + (nR - r - 1) * S;
+        const cellTopY    = yBase + (nR - r) * S;
+        const shelfH = 8; // Fachboden-Plattenstärke mm
+        const stegH  = P; // Profil mit Steg hat Profilhöhe 25mm
+
+        for (let si2 = 0; si2 < cell.shelves; si2++) {
+          // Gleichmäßig verteilte Fachbodenposition innerhalb der Zelle
+          const frac = (si2 + 1) / (cell.shelves + 1);
+          const shelfY = cellBottomY + frac * (cellTopY - cellBottomY);
+
+          // Fachboden-Platte
+          objs.push({
+            id:       `shelf_r${r}_c${c}_d${d}_s${si2}`,
+            partType: 'fachboden',
+            position: [cellCenterX * s, shelfY * s, cellCenterZ * s],
+            size:     [(S - P * 2) * s, shelfH * s, (S - P * 2) * s],
+            color:    '#C0B8A8',
+            row: r, col: c, depth: d,
+            roughness: 0.8, metalness: 0.0,
+          });
+
+          // 2x Profil mit Steg (Auflage vorne + hinten)
+          const stegZFront = zBase + d * S + hp;
+          const stegZBack  = zBase + (d + 1) * S - hp;
+          const stegY = shelfY - (shelfH / 2 + stegH / 2);
+
+          // Vorne
+          objs.push({
+            id:       `steg_f_r${r}_c${c}_d${d}_s${si2}`,
+            partType: 'profil',
+            position: [cellCenterX * s, stegY * s, stegZFront * s],
+            size:     [(S - C) * s, stegH * s, P * s],
+            color:    STEG_COLOR,
+            row: r, col: c, depth: d,
+            roughness: 0.3, metalness: 0.7,
+          });
+
+          // Hinten
+          objs.push({
+            id:       `steg_b_r${r}_c${c}_d${d}_s${si2}`,
+            partType: 'profil',
+            position: [cellCenterX * s, stegY * s, stegZBack * s],
+            size:     [(S - C) * s, stegH * s, P * s],
+            color:    STEG_COLOR,
+            row: r, col: c, depth: d,
+            roughness: 0.3, metalness: 0.7,
+          });
+        }
+      }
+    }
+  }
+
+  // ── Stellfüße (M6 Stellfuß für Shop) ──────────────────────────────────────
+  // Aufbau: runde Bodenplatte (ø30mm, 3mm hoch) + Gewindestange (ø6mm, 40mm hoch)
   if (state.opts?.footer !== false) {
+    const footPlateD = 30;   // Bodenplatte Durchmesser mm
+    const footPlateH = 3;    // Bodenplatte Höhe mm
+    const footScrewD = 8;    // Gewindestange Durchmesser mm (visuell etwas dicker)
+    const footScrewH = 40;   // Gewindestange Länge mm
+    const footTotalH = footPlateH + footScrewH;
+
     for (let ck = 0; ck <= nC; ck++) {
       for (let dk = 0; dk <= nD; dk++) {
         if (!nodeActive(nR, ck, dk)) continue;
@@ -293,15 +364,26 @@ export function computeModuleGeometry(state: ConfigState): SceneObject[] {
         const wx = xBase + ck * S;
         const wz = zBase + dk * S;
 
+        // Bodenplatte (flache Scheibe)
         objs.push({
-          id:       `foot_ck${ck}_dk${dk}`,
+          id:       `foot_plate_ck${ck}_dk${dk}`,
           partType: 'stellfuss',
-          position: [wx * s, -25 * s, wz * s],
-          size:     [20 * s, 50 * s, 20 * s],
-          color:    '#707070',
-          // glbFile: '/models/stellfuss-m6.glb', // TODO: aktivieren wenn GLB vorliegt
-          roughness: 0.6,
-          metalness: 0.3,
+          position: [wx * s, -(footTotalH - footPlateH / 2) * s, wz * s],
+          size:     [footPlateD * s, footPlateH * s, footPlateD * s],
+          color:    '#505050',
+          roughness: 0.5,
+          metalness: 0.6,
+        });
+
+        // Gewindestange (dünner Stab)
+        objs.push({
+          id:       `foot_screw_ck${ck}_dk${dk}`,
+          partType: 'stellfuss',
+          position: [wx * s, -(footScrewH / 2) * s, wz * s],
+          size:     [footScrewD * s, footScrewH * s, footScrewD * s],
+          color:    '#888888',
+          roughness: 0.3,
+          metalness: 0.8,
         });
       }
     }

@@ -231,6 +231,9 @@ export function computeBOM(config: ConfigState): BOMResult | null {
         }
       }
 
+  // Jeder Fachboden benötigt 2x Profil mit Steg als Auflage (vorne + hinten)
+  const profilMitSteg = shelves * 2;
+
   // ── Stellfüße ─────────────────────────────────────────────────────────────
   let footerQty = 0;
   if (opts.footer !== false) {
@@ -267,7 +270,7 @@ export function computeBOM(config: ConfigState): BOMResult | null {
     wuerfel,
     profileX, profileY, profileZ, profileTotal,
     framesStd, framesLit, framesTotal,
-    shelves,
+    shelves, profilMitSteg,
     profil360, profil213, fachbodenBT, wuerfelBT,
     worktopProfileX, worktopProfileZ,
     produktrahmen,

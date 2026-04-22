@@ -81,6 +81,9 @@ export const FOOTER_BY_V: Record<string, Footer> =
 /** Fachboden 600×600 mm */
 export const SHELF_ART_NR = '6964';
 
+/** Profil 25×25 Alu mit Steg l=600mm (Fachboden-Auflage) */
+export const PROFIL_MIT_STEG_ART_NR = '6953';
+
 // ─── Preisgruppen-Darstellung ─────────────────────────────────────────────────
 
 /** Lightmodul hat zunächst eine einzige Preisgruppe (PG1) */

@@ -82,6 +82,7 @@ export function buildBOMRowsExtended(
 
   // -- Fachboeden --
   addRow('Fachboeden', 'Fachboden', bom.shelves, 'Fachboden');
+  addRow('Fachboeden', 'Profil mit Steg 600mm', bom.profilMitSteg, 'ProfilMitSteg', '600');
 
   // -- Hardware --
   addRow('Hardware', 'Senkschrauben M4x8', bom.schraubenM4, 'Hardware', 'M4');

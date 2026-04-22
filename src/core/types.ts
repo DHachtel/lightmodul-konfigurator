@@ -141,6 +141,8 @@ export interface BOMResult {
 
   // ── Fachböden ─────────────────────────────────────────────────────────────
   shelves: number;
+  /** Profile mit Steg (Fachboden-Auflage): 2 Stück pro Fachboden */
+  profilMitSteg: number;
 
   // ── Beratungstisch ───────────────────────────────────────────────────────
   /** Anzahl 360mm-Vertikalprofile (Erhoehung) */
