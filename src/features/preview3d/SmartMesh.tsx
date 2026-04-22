@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useMemo, useEffect } from 'react';
+import React, { useRef, useMemo, useEffect } from 'react';
 import { useGLTF } from '@react-three/drei';
 import type { ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -155,15 +155,35 @@ function BoxFallback({
   );
 }
 
+/** Error Boundary fuer GLB-Laden — faellt auf BoxGeometry zurueck */
+class GLBErrorBoundary extends React.Component<
+  { children: React.ReactNode; fallback: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode; fallback: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  render() {
+    if (this.state.hasError) return this.props.fallback;
+    return this.props.children;
+  }
+}
+
 /**
  * SmartMesh — Rendert GLB-Modell oder BoxGeometry-Fallback.
  * Wenn `glbPath` undefined/null ist, wird sofort BoxGeometry genutzt.
- * Wenn das GLB-Laden fehlschlägt, greift der Suspense-ErrorBoundary.
+ * Wenn das GLB-Laden fehlschlaegt, greift das Error Boundary → BoxFallback.
  */
 export default function SmartMesh(props: SmartMeshProps) {
   if (!props.glbPath) {
     return <BoxFallback {...props} />;
   }
 
-  return <GLBModel {...props} glbPath={props.glbPath} />;
+  return (
+    <GLBErrorBoundary fallback={<BoxFallback {...props} />}>
+      <GLBModel {...props} glbPath={props.glbPath} />
+    </GLBErrorBoundary>
+  );
 }
