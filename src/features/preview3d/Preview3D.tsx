@@ -881,14 +881,12 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
     }
   }, [onSetCellType3D, onExpandAndActivate3D, placementType, state.rows.length]);
 
-  // ── Remove Buttons: X nur am selektierten Element anzeigen ──
+  // ── Remove Buttons: X an jedem aktiven Element (sichtbar per Hover) ──
   const cellButtons = useMemo(() => {
     const removes: { row: number; col: number; position: [number, number, number] }[] = [];
 
     // Keine X-Buttons im Produktrahmen-Modus
     if (drillLevel === 'produktrahmen') return { removes };
-    // Nur X-Button am selektierten Element anzeigen
-    if (!selectedCell) return { removes };
 
     const nR = state.rows.length;
     const nC = state.cols.length;
@@ -900,24 +898,25 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
     const yBase = 0;
     const zBase = -totalD / 2;
 
-    const r = selectedCell.row;
-    const c = selectedCell.col;
-
     const activeAny = (row: number, col: number) =>
       row >= 0 && row < nR && col >= 0 && col < nC &&
       (state.grid[row]?.[col]?.some(cell => cell.type !== '') ?? false);
 
-    if (!activeAny(r, c)) return { removes };
+    for (let r = 0; r < nR; r++) {
+      for (let c = 0; c < nC; c++) {
+        if (!activeAny(r, c)) continue;
 
-    // Position: Zentrum des Würfels
-    const cx = (xBase + (c + 0.5) * sEl) * S;
-    const cy = (yBase + (nR - r - 0.5) * sEl) * S;
-    const cz = (zBase + nD * 0.5 * sEl) * S;
+        // Position: Zentrum des Wuerfels
+        const cx = (xBase + (c + 0.5) * sEl) * S;
+        const cy = (yBase + (nR - r - 0.5) * sEl) * S;
+        const cz = (zBase + nD * 0.5 * sEl) * S;
 
-    removes.push({ row: r, col: c, position: [cx, cy, cz] });
+        removes.push({ row: r, col: c, position: [cx, cy, cz] });
+      }
+    }
 
     return { removes };
-  }, [drillLevel, state.grid, state.cols, state.rows, state.depthLayers, selectedCell]);
+  }, [drillLevel, state.grid, state.cols, state.rows, state.depthLayers]);
 
   // Szene-Objekte in Gruppen aufteilen: Platten, Profile, Griffe, GLB-Strukturteile
   const PLATTE_TYPES = new Set(['seite_l','seite_r','boden','deckel','ruecken','zwischenboden','zwischenwand','fachboden','front']);
@@ -1111,10 +1110,7 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
         </group>
       </Suspense>
 
-      {/* Gruener Highlight-Rahmen — bei selektiertem Element in beiden Ebenen */}
-      {selectedCell && (
-        <SelectionHighlight objects={objects} row={selectedCell.row} col={selectedCell.col} />
-      )}
+      {/* SelectionHighlight entfernt — Loeschen per Hover-X statt Selektion */}
 
       {/* Produktrahmen-Flaechen — nur in produktrahmen-Ebene */}
       {drillLevel === 'produktrahmen' && (
@@ -1193,19 +1189,7 @@ const Preview3D = forwardRef<ThreeCanvasHandle, Preview3DProps>(function Preview
         ))}
       </group>
 
-      {/* Spaltenbreiten / Zeilenhöhen — nur bei aktiver Selektion */}
-      <group name="dim-labels">
-        {drillLevel === 'shop' && selectedCell && onSetCol && onSetRow && (
-          <ColumnRowLabels
-            cols={state.cols}
-            rows={state.rows}
-            grid={state.grid.map(row => row.map(colArr => colArr[0] ?? { type: '' }))}
-            depth={state.depthLayers * ELEMENT_SIZE_MM}
-            onSetCol={onSetCol}
-            onSetRow={onSetRow}
-          />
-        )}
-      </group>
+      {/* Bemaßungs-Labels entfernt — Lightmodul hat fixes 600mm-Raster */}
 
       {/* Änderung 1: Boden-Shadow via ContactShadows */}
       <ContactShadows

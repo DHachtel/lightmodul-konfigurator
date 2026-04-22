@@ -8,7 +8,7 @@ interface RemoveButtonProps {
   onClick: () => void;
 }
 
-/** ×-Button zum Entfernen eines Elements — nur am selektierten Element, rot bei Hover */
+/** X-Button zum Entfernen — klein + transparent, bei Hover gross + rot */
 export default function RemoveButton({ position, onClick }: RemoveButtonProps) {
   const [hovered, setHovered] = useState(false);
   return (
@@ -18,14 +18,18 @@ export default function RemoveButton({ position, onClick }: RemoveButtonProps) {
         onMouseEnter={() => { setHovered(true); document.body.style.cursor = 'pointer'; }}
         onMouseLeave={() => { setHovered(false); document.body.style.cursor = ''; }}
         style={{
-          width: 32, height: 32, borderRadius: '50%',
-          background: hovered ? '#EF4444' : 'rgba(120,120,120,0.7)',
-          color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 16, fontWeight: 700, cursor: 'pointer',
-          transition: 'all 0.15s ease',
-          boxShadow: hovered ? '0 0 12px rgba(239,68,68,0.5)' : '0 1px 4px rgba(0,0,0,0.3)',
+          width: hovered ? 28 : 18,
+          height: hovered ? 28 : 18,
+          borderRadius: '50%',
+          background: hovered ? '#EF4444' : 'rgba(140,140,140,0.35)',
+          color: hovered ? '#fff' : 'rgba(255,255,255,0.6)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: hovered ? 15 : 10,
+          fontWeight: 700, cursor: 'pointer',
+          transition: 'all 0.18s ease',
+          boxShadow: hovered ? '0 0 10px rgba(239,68,68,0.4)' : 'none',
         }}
-      >×</div>
+      >{hovered ? '×' : '×'}</div>
     </Html>
   );
 }
