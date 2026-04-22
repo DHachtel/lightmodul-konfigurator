@@ -27,7 +27,6 @@ import { useModuleGeometry, type SceneObject } from './useModuleGeometry';
 import SmartMesh from './SmartMesh';
 import RemoveButton from './RemoveButton';
 
-import ColumnRowLabels from './ColumnRowLabels';
 import { getWoodTexture, getMDFTexture } from './useWoodTexture';
 import DimensionOverlay from './DimensionOverlay';
 import { Leva } from 'leva';
@@ -98,44 +97,6 @@ function CameraAutoFrame({
     firstRun.current = false;
   }, [ccRef, minX, minY, minZ, maxX, maxY, maxZ]);
   return null;
-}
-
-// ── SelectionHighlight — grüner Rahmen um das selektierte Modul ─────────────
-
-function SelectionHighlight({
-  objects,
-  row,
-  col,
-}: {
-  objects: SceneObject[];
-  row: number;
-  col: number;
-}) {
-  const box = useMemo(() => {
-    const matched = objects.filter(o => o.row === row && o.col === col);
-    if (matched.length === 0) return null;
-    const b = new THREE.Box3();
-    for (const obj of matched) {
-      const halfW = obj.size[0] / 2, halfH = obj.size[1] / 2, halfD = obj.size[2] / 2;
-      b.expandByPoint(new THREE.Vector3(obj.position[0] - halfW, obj.position[1] - halfH, obj.position[2] - halfD));
-      b.expandByPoint(new THREE.Vector3(obj.position[0] + halfW, obj.position[1] + halfH, obj.position[2] + halfD));
-    }
-    const size = new THREE.Vector3();
-    const center = new THREE.Vector3();
-    b.getSize(size);
-    b.getCenter(center);
-    return { size: [size.x, size.y, size.z] as [number, number, number], center };
-  }, [objects, row, col]);
-
-  if (!box) return null;
-
-  return (
-    <mesh position={[box.center.x, box.center.y, box.center.z]}>
-      <boxGeometry args={box.size} />
-      <meshBasicMaterial visible={false} />
-      <Edges color="#4ade80" linewidth={2} />
-    </mesh>
-  );
 }
 
 // ── PhantomElement — Ghost-Box für Grid-Erweiterung ──────────────────────────

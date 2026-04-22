@@ -8,28 +8,39 @@ interface RemoveButtonProps {
   onClick: () => void;
 }
 
-/** X-Button zum Entfernen — klein + transparent, bei Hover gross + rot */
+/** X-Button zum Entfernen — immer sichtbar, bei Hover gross + rot */
 export default function RemoveButton({ position, onClick }: RemoveButtonProps) {
   const [hovered, setHovered] = useState(false);
   return (
-    <Html position={position} center style={{ pointerEvents: 'auto' }}>
+    <Html position={position} center style={{ pointerEvents: 'none' }}>
+      {/* Grosser unsichtbarer Klickbereich (48px) */}
       <div
         onClick={(e) => { e.stopPropagation(); onClick(); }}
         onMouseEnter={() => { setHovered(true); document.body.style.cursor = 'pointer'; }}
         onMouseLeave={() => { setHovered(false); document.body.style.cursor = ''; }}
         style={{
-          width: hovered ? 28 : 18,
-          height: hovered ? 28 : 18,
-          borderRadius: '50%',
-          background: hovered ? '#EF4444' : 'rgba(140,140,140,0.35)',
-          color: hovered ? '#fff' : 'rgba(255,255,255,0.6)',
+          pointerEvents: 'auto',
+          width: 48, height: 48,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: hovered ? 15 : 10,
-          fontWeight: 700, cursor: 'pointer',
-          transition: 'all 0.18s ease',
-          boxShadow: hovered ? '0 0 10px rgba(239,68,68,0.4)' : 'none',
+          cursor: 'pointer',
         }}
-      >{hovered ? '×' : '×'}</div>
+      >
+        {/* Sichtbarer Kern */}
+        <div style={{
+          width: hovered ? 30 : 22,
+          height: hovered ? 30 : 22,
+          borderRadius: '50%',
+          background: hovered ? '#EF4444' : 'rgba(100,100,100,0.5)',
+          color: '#fff',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: hovered ? 16 : 12,
+          fontWeight: 700,
+          transition: 'all 0.15s ease',
+          boxShadow: hovered
+            ? '0 0 12px rgba(239,68,68,0.5)'
+            : '0 1px 3px rgba(0,0,0,0.25)',
+        }}>×</div>
+      </div>
     </Html>
   );
 }
